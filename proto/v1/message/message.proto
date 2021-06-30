@@ -1,0 +1,37 @@
+syntax = "proto3";
+package proto.v1.message;
+option go_package = "github.com/textileio/bidbot/gen/proto/v1/message;message";
+
+import "google/protobuf/timestamp.proto";
+import "proto/v1/auctioneer.proto";
+
+message Auction {
+    string id = 1;
+    string payload_cid = 2;
+    uint64 deal_size = 3;
+    uint64 deal_duration = 4;
+    uint64 fil_epoch_deadline = 5;
+    proto.v1.Sources sources = 6;
+    google.protobuf.Timestamp ends_at = 7;
+}
+
+message Bid {
+    string auction_id = 1;
+    string miner_addr = 2;
+    bytes wallet_addr_sig = 3;
+    int64 ask_price = 4;
+    int64 verified_ask_price = 5;
+    uint64 start_epoch = 6;
+    bool fast_retrieval = 7;
+}
+
+message WinningBid {
+    string auction_id = 1;
+    string bid_id = 2;
+}
+
+message WinningBidProposal {
+    string auction_id = 1;
+    string bid_id = 2;
+    string proposal_cid = 3;
+}

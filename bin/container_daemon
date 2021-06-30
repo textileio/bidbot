@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+repo="$BIDBOT_PATH"
+
+if [ -e "$repo/config" ]; then
+  echo "Found config at $repo"
+else
+  ./bidbot init
+fi
+
+exec ./bidbot "$@"
