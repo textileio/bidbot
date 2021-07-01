@@ -13,10 +13,6 @@ import (
 )
 
 const (
-	invalidStatus = "invalid"
-)
-
-const (
 	epochsPerDay uint64 = 60 * 24 * 2 // 1 epoch = ~30s
 	// MinDealDuration is the minimum allowed deal duration in epochs requested of miners.
 	MinDealDuration = epochsPerDay * 365 / 2 // ~6 months
@@ -48,50 +44,6 @@ type Auction struct {
 	ExcludedMiners   []string
 	FilEpochDeadline uint64
 	Sources          Sources
-	Status           AuctionStatus
-	Bids             map[BidID]Bid
-	WinningBids      map[BidID]WinningBid
-	StartedAt        time.Time
-	UpdatedAt        time.Time
-	Duration         time.Duration
-	Attempts         uint32
-	ErrorCause       string
-	// Ugly trick: a workaround to avoid calling Auctioneer.finalizeAuction
-	// twice, because auction are enqueued to the Queue again indirectly
-	// by Auctioneer.DeliverProposal.
-	BrokerAlreadyNotifiedByClosedAuction bool
-}
-
-// AuctionStatus is the status of an auction.
-type AuctionStatus int
-
-const (
-	// AuctionStatusUnspecified indicates the initial or invalid status of an auction.
-	AuctionStatusUnspecified AuctionStatus = iota
-	// AuctionStatusQueued indicates the auction is currently queued.
-	AuctionStatusQueued
-	// AuctionStatusStarted indicates the auction has started.
-	AuctionStatusStarted
-	// AuctionStatusFinalized indicates the auction has reached a final state.
-	// If ErrorCause is empty, the auction has received a sufficient number of bids.
-	// If ErrorCause is not empty, a fatal error has occurred and the auction should be considered abandoned.
-	AuctionStatusFinalized
-)
-
-// String returns a string-encoded status.
-func (as AuctionStatus) String() string {
-	switch as {
-	case AuctionStatusUnspecified:
-		return "unspecified"
-	case AuctionStatusQueued:
-		return "queued"
-	case AuctionStatusStarted:
-		return "started"
-	case AuctionStatusFinalized:
-		return "finalized"
-	default:
-		return invalidStatus
-	}
 }
 
 // BidID is a unique identifier for a Bid.
