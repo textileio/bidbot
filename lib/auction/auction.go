@@ -1,11 +1,19 @@
-package broker
+package auction
 
 import (
-	"path"
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
+)
+
+const (
+	invalidStatus = "invalid"
 )
 
 const (
@@ -24,6 +32,9 @@ const (
 
 // AuctionID is a unique identifier for an Auction.
 type AuctionID string
+
+// StorageDealID is the type of a StorageDeal identifier.
+type StorageDealID string
 
 // Auction defines the core auction model.
 type Auction struct {
@@ -46,7 +57,7 @@ type Auction struct {
 	Attempts         uint32
 	ErrorCause       string
 	// Ugly trick: a workaround to avoid calling Auctioneer.finalizeAuction
-	// twice, because auctions are enqueued to the Queue again indirectly
+	// twice, because auction are enqueued to the Queue again indirectly
 	// by Auctioneer.DeliverProposal.
 	BrokerAlreadyNotifiedByClosedAuction bool
 }
@@ -106,23 +117,56 @@ type WinningBid struct {
 	ProposalCidAcknowledged bool // Whether or not the bidder acknowledged receipt of the proposal Cid
 }
 
-// AuctionTopic is used by brokers to publish and by miners to subscribe to deal auctions.
-const AuctionTopic string = "/textile/auction/0.0.1"
-
-// BidsTopic is used by miners to submit deal auction bids.
-// "/textile/auction/0.0.1/<auction_id>/bids".
-func BidsTopic(auctionID AuctionID) string {
-	return path.Join(AuctionTopic, string(auctionID), "bids")
+// CARURL contains details of a CAR file stored in an HTTP endpoint.
+type CARURL struct {
+	URL url.URL
 }
 
-// WinsTopic is used by brokers to notify a bidbot that it has won the deal auction.
-// "/textile/auction/0.0.1/<peer_id>/wins".
-func WinsTopic(pid peer.ID) string {
-	return path.Join(AuctionTopic, pid.String(), "wins")
+// CARIPFS contains details of a CAR file Cid stored in an HTTP endpoint.
+type CARIPFS struct {
+	Cid        cid.Cid
+	Multiaddrs []multiaddr.Multiaddr
 }
 
-// ProposalsTopic is used by brokers to notify a bidbot of the proposal cid.Cid for an accepted deal auction.
-// "/textile/auction/0.0.1/<peer_id>/proposals".
-func ProposalsTopic(pid peer.ID) string {
-	return path.Join(AuctionTopic, pid.String(), "proposals")
+// Sources contains information about download sources for prepared data.
+type Sources struct {
+	CARURL  *CARURL
+	CARIPFS *CARIPFS
+}
+
+// Validate ensures Sources are valid.
+func (s Sources) Validate() error {
+	if s.CARURL == nil && s.CARIPFS == nil {
+		return errors.New("should contain at least one source")
+	}
+	if s.CARURL != nil {
+		switch s.CARURL.URL.Scheme {
+		case "http", "https":
+		default:
+			return fmt.Errorf("unsupported scheme %s", s.CARURL.URL.Scheme)
+		}
+	}
+	if s.CARIPFS != nil {
+		if !s.CARIPFS.Cid.Defined() {
+			return errors.New("cid undefined")
+		}
+		if len(s.CARIPFS.Multiaddrs) == 0 {
+			return errors.New("no multiaddr")
+		}
+	}
+	return nil
+}
+
+// String returns the string representation of the sources.
+func (s Sources) String() string {
+	var b strings.Builder
+	_, _ = b.WriteString("{")
+	if s.CARURL != nil {
+		fmt.Fprintf(&b, "url: %s,", s.CARURL.URL.String())
+	}
+	if s.CARIPFS != nil {
+		fmt.Fprintf(&b, "cid: %s,", s.CARIPFS.Cid.String())
+	}
+	_, _ = b.WriteString("}")
+	return b.String()
 }

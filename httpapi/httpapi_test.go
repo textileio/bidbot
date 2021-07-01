@@ -12,7 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/marketpeer"
 	"github.com/textileio/bidbot/service/datauri"
 	bidstore "github.com/textileio/bidbot/service/store"
@@ -76,8 +76,8 @@ func TestAPI_Deals(t *testing.T) {
 
 	ms := &mockService{}
 	mux := createMux(ms)
-	ms.On("GetBid", broker.BidID("a")).Return(submitted, nil)
-	ms.On("GetBid", broker.BidID("z")).Return(nil, bidstore.ErrBidNotFound)
+	ms.On("GetBid", auction.BidID("a")).Return(submitted, nil)
+	ms.On("GetBid", auction.BidID("z")).Return(nil, bidstore.ErrBidNotFound)
 	for _, tc := range []struct {
 		name           string
 		url            string
@@ -154,7 +154,7 @@ func (s *mockService) PeerInfo() (*marketpeer.PeerInfo, error) {
 	panic("not implemented")
 }
 
-func (s *mockService) GetBid(id broker.BidID) (*bidstore.Bid, error) {
+func (s *mockService) GetBid(id auction.BidID) (*bidstore.Bid, error) {
 	args := s.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

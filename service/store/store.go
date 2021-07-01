@@ -21,7 +21,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/oklog/ulid/v2"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/lotusclient"
 	"github.com/textileio/bidbot/service/datauri"
@@ -69,13 +69,13 @@ var (
 
 // Bid defines the core bid model from a miner's perspective.
 type Bid struct {
-	ID                   broker.BidID
-	AuctionID            broker.AuctionID
+	ID                   auction.BidID
+	AuctionID            auction.AuctionID
 	AuctioneerID         peer.ID
 	PayloadCid           cid.Cid
 	DealSize             uint64
 	DealDuration         uint64
-	Sources              broker.Sources
+	Sources              auction.Sources
 	Status               BidStatus
 	AskPrice             int64 // attoFIL per GiB per epoch
 	VerifiedAskPrice     int64 // attoFIL per GiB per epoch
@@ -281,7 +281,7 @@ func validate(b Bid) error {
 
 // GetBid returns a bid by id.
 // If a bid is not found for id, ErrBidNotFound is returned.
-func (s *Store) GetBid(id broker.BidID) (*Bid, error) {
+func (s *Store) GetBid(id auction.BidID) (*Bid, error) {
 	b, err := getBid(s.store, id)
 	if err != nil {
 		return nil, err
@@ -289,7 +289,7 @@ func (s *Store) GetBid(id broker.BidID) (*Bid, error) {
 	return b, nil
 }
 
-func getBid(reader ds.Read, id broker.BidID) (*Bid, error) {
+func getBid(reader ds.Read, id auction.BidID) (*Bid, error) {
 	val, err := reader.Get(dsPrefix.ChildString(string(id)))
 	if errors.Is(err, ds.ErrNotFound) {
 		return nil, ErrBidNotFound
@@ -305,7 +305,7 @@ func getBid(reader ds.Read, id broker.BidID) (*Bid, error) {
 
 // SetAwaitingProposalCid updates bid status to BidStatusAwaitingProposal.
 // If a bid is not found for id, ErrBidNotFound is returned.
-func (s *Store) SetAwaitingProposalCid(id broker.BidID) error {
+func (s *Store) SetAwaitingProposalCid(id auction.BidID) error {
 	txn, err := s.store.NewTransaction(false)
 	if err != nil {
 		return fmt.Errorf("creating txn: %v", err)
@@ -332,7 +332,7 @@ func (s *Store) SetAwaitingProposalCid(id broker.BidID) error {
 
 // SetProposalCid sets the bid proposal cid and updates status to BidStatusQueuedData.
 // If a bid is not found for id, ErrBidNotFound is returned.
-func (s *Store) SetProposalCid(id broker.BidID, pcid cid.Cid) error {
+func (s *Store) SetProposalCid(id auction.BidID, pcid cid.Cid) error {
 	if !pcid.Defined() {
 		return errors.New("proposal cid must be defined")
 	}
@@ -462,7 +462,7 @@ func (s *Store) WriteDealData(b *Bid) (string, error) {
 }
 
 // WriteDataURI writes the uri resource to the configured deal data directory.
-func (s *Store) WriteDataURI(bidID broker.BidID, payloadCid, uri string) (string, error) {
+func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string) (string, error) {
 	duri, err := datauri.NewURI(payloadCid, uri)
 	if err != nil {
 		return "", fmt.Errorf("parsing data uri: %w", err)
@@ -504,7 +504,7 @@ func (s *Store) HealthCheck() error {
 	return nil
 }
 
-func (s *Store) dealDataFilePathFor(bidID broker.BidID, payloadCid string) string {
+func (s *Store) dealDataFilePathFor(bidID auction.BidID, payloadCid string) string {
 	return filepath.Join(s.dealDataDirectory, fmt.Sprintf("%s_%s", payloadCid, bidID))
 }
 
@@ -730,7 +730,7 @@ func (s *Store) getQueued(txn ds.Txn) (*Bid, error) {
 		return nil, fmt.Errorf("getting next result: %v", res.Error)
 	}
 
-	b, err := getBid(txn, broker.BidID(path.Base(res.Key)))
+	b, err := getBid(txn, auction.BidID(path.Base(res.Key)))
 	if err != nil {
 		return nil, fmt.Errorf("getting bid: %v", err)
 	}
@@ -781,7 +781,7 @@ func (s *Store) getFetching(txn ds.Txn) ([]Bid, error) {
 		if res.Error != nil {
 			return nil, fmt.Errorf("getting next result: %v", res.Error)
 		}
-		b, err := getBid(txn, broker.BidID(path.Base(res.Key)))
+		b, err := getBid(txn, auction.BidID(path.Base(res.Key)))
 		if err != nil {
 			return nil, fmt.Errorf("getting bid: %v", err)
 		}

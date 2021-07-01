@@ -25,7 +25,7 @@ import (
 	mbase "github.com/multiformats/go-multibase"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/lib/finalizer"
@@ -102,12 +102,12 @@ func init() {
 		},
 		{
 			Name:        "deal-duration-min",
-			DefValue:    broker.MinDealDuration,
+			DefValue:    auction.MinDealDuration,
 			Description: "Minimum deal duration to bid on in epochs; default is ~6 months",
 		},
 		{
 			Name:        "deal-duration-max",
-			DefValue:    broker.MaxDealDuration,
+			DefValue:    auction.MaxDealDuration,
 			Description: "Maximum deal duration to bid on in epochs; default is ~1 year",
 		},
 		{
@@ -171,8 +171,8 @@ Also take the file system overhead into consideration when calculating the limit
 
 var rootCmd = &cobra.Command{
 	Use:   cliName,
-	Short: "Bidbot listens for Filecoin storage deal auctions from deal brokers",
-	Long: `Bidbot listens for Filecoin storage deal auctions from deal brokers.
+	Short: "Bidbot listens for Filecoin storage deal auction from deal brokers",
+	Long: `Bidbot listens for Filecoin storage deal auction from deal brokers.
 
 bidbot will automatically bid on storage deals that pass configured filters at
 the configured prices.
@@ -220,7 +220,7 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 
     lotus wallet sign [owner-address] %s
 
-2. Start listening for deal auctions using the wallet address and signature from step 1:
+2. Start listening for deal auction using the wallet address and signature from step 1:
 
     bidbot daemon --miner-addr [address] 
                   --wallet-addr-sig [signature] 
@@ -237,7 +237,7 @@ Good luck!
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "Run a network-connected bidding bot",
-	Long:  "Run a network-connected bidding bot that listens for and bids on storage deal auctions.",
+	Long:  "Run a network-connected bidding bot that listens for and bids on storage deal auction.",
 	Args:  cobra.ExactArgs(0),
 	PersistentPreRun: func(c *cobra.Command, args []string) {
 		common.ExpandEnvVars(v, v.AllSettings())

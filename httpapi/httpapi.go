@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/marketpeer"
 	"github.com/textileio/bidbot/service/datauri"
 	bidstore "github.com/textileio/bidbot/service/store"
@@ -23,7 +23,7 @@ var (
 type Service interface {
 	PeerInfo() (*marketpeer.PeerInfo, error)
 	ListBids(query bidstore.Query) ([]*bidstore.Bid, error)
-	GetBid(id broker.BidID) (*bidstore.Bid, error)
+	GetBid(id auction.BidID) (*bidstore.Bid, error)
 	WriteDataURI(payloadCid, uri string) (string, error)
 }
 
@@ -102,7 +102,7 @@ func dealsHandler(service Service) http.HandlerFunc {
 				return
 			}
 		} else {
-			bid, err := service.GetBid(broker.BidID(urlParts[2]))
+			bid, err := service.GetBid(auction.BidID(urlParts[2]))
 			if err == nil {
 				bids = append(bids, bid)
 			} else if err != bidstore.ErrBidNotFound {

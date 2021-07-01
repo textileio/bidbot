@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	core "github.com/textileio/bidbot/lib/broker"
+	core "github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/logging"
 	"github.com/textileio/bidbot/lib/marketpeer"
