@@ -5,7 +5,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	ma "github.com/multiformats/go-multiaddr"
-	pb "github.com/textileio/bidbot/gen/proto/v1"
+	pb "github.com/textileio/bidbot/gen/v1"
 	"github.com/textileio/bidbot/lib/auction"
 )
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package proto.v1;
-option go_package = "github.com/textileio/bidbot/gen/proto/v1;auctioneer";
+option go_package = "github.com/textileio/bidbot/gen/v1;auction";
 
 import "google/protobuf/timestamp.proto";
 
@@ -12,39 +12,6 @@ message Auction {
     uint64 deal_duration = 5;
     uint32 deal_replication = 6;
     bool deal_verified = 7;
-    Status status = 8;
-    map<string, Bid> bids = 9;
-    map<string, WinningBid> winning_bids = 10;
-    google.protobuf.Timestamp started_at = 11;
-    google.protobuf.Timestamp updated_at = 12;
-    int64 duration = 13;
-    uint32 attempts = 14;
-    string error = 15;
-                               
-    enum Status {
-        STATUS_UNSPECIFIED = 0;
-        STATUS_QUEUED = 1;
-        STATUS_STARTED = 2;
-        STATUS_FINALIZED = 3;
-    }
-
-    message Bid {
-        string miner_addr = 1;
-        bytes wallet_addr_sig = 2;
-        string bidder_id = 3;
-        int64 ask_price = 4;
-        int64 verified_ask_price = 5;
-        uint64 start_epoch = 6;
-        bool fast_retrieval = 7;
-        google.protobuf.Timestamp received_at = 8;
-    }
-
-    message WinningBid {
-        string bidder_id = 1;
-        bool acknowledged = 2;
-        string proposal_cid = 3;
-        bool proposal_cid_acknowledged = 4;
-    }
 }
 
 message ReadyToAuctionRequest {
@@ -72,20 +39,10 @@ message Sources {
     string cid = 1;
     repeated string multiaddrs = 2;
   }
-
-
 }
 
 message ReadyToAuctionResponse {
   string id = 1;
-}
-
-message GetAuctionRequest {
-  string id = 1;
-}
-
-message GetAuctionResponse {
-  Auction auction = 1;
 }
 
 message ProposalAcceptedRequest {
@@ -99,6 +56,5 @@ message ProposalAcceptedResponse {
 
 service APIService {
     rpc ReadyToAuction(ReadyToAuctionRequest) returns (ReadyToAuctionResponse) {}
-    rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse) {}
     rpc ProposalAccepted(ProposalAcceptedRequest) returns (ProposalAcceptedResponse) {}
 }

@@ -1,9 +1,9 @@
 syntax = "proto3";
 package proto.v1.message;
-option go_package = "github.com/textileio/bidbot/gen/proto/v1/message;message";
+option go_package = "github.com/textileio/bidbot/gen/v1/message;message";
 
 import "google/protobuf/timestamp.proto";
-import "proto/v1/auctioneer.proto";
+import "v1/auction.proto";
 
 message Auction {
     string id = 1;

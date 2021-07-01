@@ -18,7 +18,7 @@ import (
 	golog "github.com/textileio/go-log/v2"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/textileio/bidbot/gen/proto/v1/message"
+	pb "github.com/textileio/bidbot/gen/v1/message"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/cast"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
