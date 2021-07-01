@@ -1,0 +1,104 @@
+syntax = "proto3";
+package proto.v1;
+option go_package = "github.com/textileio/bidbot/gen/proto/v1;auctioneer";
+
+import "google/protobuf/timestamp.proto";
+
+message Auction {
+    string id = 1;
+    string storage_deal_id = 2;
+    string payload_cid = 3;
+    uint64 deal_size = 4;
+    uint64 deal_duration = 5;
+    uint32 deal_replication = 6;
+    bool deal_verified = 7;
+    Status status = 8;
+    map<string, Bid> bids = 9;
+    map<string, WinningBid> winning_bids = 10;
+    google.protobuf.Timestamp started_at = 11;
+    google.protobuf.Timestamp updated_at = 12;
+    int64 duration = 13;
+    uint32 attempts = 14;
+    string error = 15;
+                               
+    enum Status {
+        STATUS_UNSPECIFIED = 0;
+        STATUS_QUEUED = 1;
+        STATUS_STARTED = 2;
+        STATUS_FINALIZED = 3;
+    }
+
+    message Bid {
+        string miner_addr = 1;
+        bytes wallet_addr_sig = 2;
+        string bidder_id = 3;
+        int64 ask_price = 4;
+        int64 verified_ask_price = 5;
+        uint64 start_epoch = 6;
+        bool fast_retrieval = 7;
+        google.protobuf.Timestamp received_at = 8;
+    }
+
+    message WinningBid {
+        string bidder_id = 1;
+        bool acknowledged = 2;
+        string proposal_cid = 3;
+        bool proposal_cid_acknowledged = 4;
+    }
+}
+
+message ReadyToAuctionRequest {
+    string storage_deal_id = 1;
+    string payload_cid = 2;
+    uint64 deal_size = 3;
+    uint64 deal_duration = 4;
+    uint32 deal_replication = 5;
+    bool deal_verified = 6;
+    repeated string excluded_miners = 7;
+    uint64 fil_epoch_deadline = 8;
+    Sources sources = 9;
+}
+
+
+message Sources {
+  CARURL car_url = 1;
+  CARIPFS car_ipfs = 2;
+
+  message CARURL {
+    string URL = 1;
+  }
+
+  message CARIPFS {
+    string cid = 1;
+    repeated string multiaddrs = 2;
+  }
+
+
+}
+
+message ReadyToAuctionResponse {
+  string id = 1;
+}
+
+message GetAuctionRequest {
+  string id = 1;
+}
+
+message GetAuctionResponse {
+  Auction auction = 1;
+}
+
+message ProposalAcceptedRequest {
+    string auction_id = 1;
+    string bid_id = 2;
+    string proposal_cid = 3;
+}
+
+message ProposalAcceptedResponse {
+}
+
+service APIService {
+    rpc ReadyToAuction(ReadyToAuctionRequest) returns (ReadyToAuctionResponse) {}
+    rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse) {}
+    rpc ProposalAccepted(ProposalAcceptedRequest) returns (ProposalAcceptedResponse) {}
+}
