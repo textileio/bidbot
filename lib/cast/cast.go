@@ -9,31 +9,6 @@ import (
 	"github.com/textileio/bidbot/lib/auction"
 )
 
-// AuctionToPb returns pb.Auction from auction.Auction.
-func AuctionToPb(a auction.Auction) *pb.Auction {
-	pba := &pb.Auction{
-		Id:              string(a.ID),
-		StorageDealId:   string(a.StorageDealID),
-		DealSize:        a.DealSize,
-		DealDuration:    a.DealDuration,
-		DealReplication: a.DealReplication,
-		DealVerified:    a.DealVerified,
-	}
-	return pba
-}
-
-// AuctionFromPb returns auction.Auction from pb.Auction.
-func AuctionFromPb(pba *pb.Auction) auction.Auction {
-	return auction.Auction{
-		ID:              auction.AuctionID(pba.Id),
-		StorageDealID:   auction.StorageDealID(pba.StorageDealId),
-		DealSize:        pba.DealSize,
-		DealDuration:    pba.DealDuration,
-		DealReplication: pba.DealReplication,
-		DealVerified:    pba.DealVerified,
-	}
-}
-
 // SourcesToPb converts Sources to pb.
 func SourcesToPb(sources auction.Sources) *pb.Sources {
 	var carIPFS *pb.Sources_CARIPFS

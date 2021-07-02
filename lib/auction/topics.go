@@ -6,6 +6,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+// AuctionID is a unique identifier for an Auction.
+type AuctionID string
+
 // AuctionTopic is used by brokers to publish and by miners to subscribe to deal auction.
 const AuctionTopic string = "/textile/auction/0.0.1"
 

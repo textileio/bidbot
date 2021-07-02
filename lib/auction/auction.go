@@ -18,33 +18,7 @@ const (
 	MinDealDuration = epochsPerDay * 365 / 2 // ~6 months
 	// MaxDealDuration is the maximum allowed deal duration in epochs requested of miners.
 	MaxDealDuration = epochsPerDay * 365 // ~1 year
-	// MinDealReplication is the minimum allowed deal replication requested of miners.
-	MinDealReplication = 1
-	// MaxDealReplication is the maximum allowed deal replication requested of miners.
-	MaxDealReplication = 10
-	// DefaultDealDeadline is the default deadline for deals.
-	DefaultDealDeadline = time.Hour * 48
 )
-
-// AuctionID is a unique identifier for an Auction.
-type AuctionID string
-
-// StorageDealID is the type of a StorageDeal identifier.
-type StorageDealID string
-
-// Auction defines the core auction model.
-type Auction struct {
-	ID               AuctionID
-	StorageDealID    StorageDealID
-	PayloadCid       cid.Cid
-	DealSize         uint64
-	DealDuration     uint64
-	DealReplication  uint32
-	DealVerified     bool
-	ExcludedMiners   []string
-	FilEpochDeadline uint64
-	Sources          Sources
-}
 
 // BidID is a unique identifier for a Bid.
 type BidID string
