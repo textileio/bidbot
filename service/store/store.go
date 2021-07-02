@@ -23,9 +23,9 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
-	"github.com/textileio/bidbot/lib/lotusclient"
 	"github.com/textileio/bidbot/service/datauri"
 	"github.com/textileio/bidbot/service/limiter"
+	"github.com/textileio/bidbot/service/lotusclient"
 	dsextensions "github.com/textileio/go-datastore-extensions"
 	golog "github.com/textileio/go-log/v2"
 )

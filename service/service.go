@@ -24,11 +24,11 @@ import (
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/lib/finalizer"
-	"github.com/textileio/bidbot/lib/lotusclient"
 	"github.com/textileio/bidbot/lib/marketpeer"
 
 	"github.com/textileio/bidbot/service/datauri"
 	"github.com/textileio/bidbot/service/limiter"
+	"github.com/textileio/bidbot/service/lotusclient"
 	bidstore "github.com/textileio/bidbot/service/store"
 )
 
