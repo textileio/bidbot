@@ -98,7 +98,7 @@ func (p *BidParams) Validate() error {
 	return nil
 }
 
-// AuctionFilters specifies filters used when selecting auction to bid on.
+// AuctionFilters specifies filters used when selecting auctions to bid on.
 type AuctionFilters struct {
 	// DealDuration sets the min and max deal duration to bid on.
 	DealDuration MinMaxFilter
@@ -236,19 +236,19 @@ func (s *Service) Subscribe(bootstrap bool) error {
 		s.peer.Bootstrap()
 	}
 
-	// Subscribe to the global auction topic
-	a, err := s.peer.NewTopic(s.ctx, auction.AuctionTopic, true)
+	// Subscribe to the global auctions topic
+	auctions, err := s.peer.NewTopic(s.ctx, auction.AuctionTopic, true)
 	if err != nil {
 		return fmt.Errorf("creating auction topic: %v", err)
 	}
-	a.SetEventHandler(s.eventHandler)
-	a.SetMessageHandler(s.auctionHandler)
+	auctions.SetEventHandler(s.eventHandler)
+	auctions.SetMessageHandler(s.auctionsHandler)
 
 	// Subscribe to our own wins topic
 	wins, err := s.peer.NewTopic(s.ctx, auction.WinsTopic(s.peer.Host().ID()), true)
 	if err != nil {
-		if err := a.Close(); err != nil {
-			log.Errorf("closing auction topic: %v", err)
+		if err := auctions.Close(); err != nil {
+			log.Errorf("closing auctions topic: %v", err)
 		}
 		return fmt.Errorf("creating wins topic: %v", err)
 	}
@@ -258,8 +258,8 @@ func (s *Service) Subscribe(bootstrap bool) error {
 	// Subscribe to our own proposals topic
 	props, err := s.peer.NewTopic(s.ctx, auction.ProposalsTopic(s.peer.Host().ID()), true)
 	if err != nil {
-		if err := a.Close(); err != nil {
-			log.Errorf("closing auction topic: %v", err)
+		if err := auctions.Close(); err != nil {
+			log.Errorf("closing auctions topic: %v", err)
 		}
 		if err := wins.Close(); err != nil {
 			log.Errorf("closing wins topic: %v", err)
@@ -269,7 +269,7 @@ func (s *Service) Subscribe(bootstrap bool) error {
 	props.SetEventHandler(s.eventHandler)
 	props.SetMessageHandler(s.proposalHandler)
 
-	s.finalizer.Add(a, wins, props)
+	s.finalizer.Add(auctions, wins, props)
 
 	log.Info("subscribed to the deal auction feed")
 	s.subscribed = true
@@ -302,7 +302,7 @@ func (s *Service) eventHandler(from peer.ID, topic string, msg []byte) {
 	log.Debugf("%s peer event: %s %s", topic, from, msg)
 }
 
-func (s *Service) auctionHandler(from peer.ID, topic string, msg []byte) ([]byte, error) {
+func (s *Service) auctionsHandler(from peer.ID, topic string, msg []byte) ([]byte, error) {
 	log.Debugf("%s received auction from %s", topic, from)
 
 	auction := &pb.Auction{}
