@@ -18,17 +18,17 @@ import (
 	golog "github.com/textileio/go-log/v2"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/textileio/bidbot/gen/proto/v1/message"
-	"github.com/textileio/bidbot/lib/auctioneer/cast"
-	"github.com/textileio/bidbot/lib/broker"
+	pb "github.com/textileio/bidbot/gen/v1"
+	"github.com/textileio/bidbot/lib/auction"
+	"github.com/textileio/bidbot/lib/cast"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/lib/finalizer"
-	"github.com/textileio/bidbot/lib/lotusclient"
 	"github.com/textileio/bidbot/lib/marketpeer"
 
 	"github.com/textileio/bidbot/service/datauri"
 	"github.com/textileio/bidbot/service/limiter"
+	"github.com/textileio/bidbot/service/lotusclient"
 	bidstore "github.com/textileio/bidbot/service/store"
 )
 
@@ -237,15 +237,15 @@ func (s *Service) Subscribe(bootstrap bool) error {
 	}
 
 	// Subscribe to the global auctions topic
-	auctions, err := s.peer.NewTopic(s.ctx, broker.AuctionTopic, true)
+	auctions, err := s.peer.NewTopic(s.ctx, auction.AuctionTopic, true)
 	if err != nil {
-		return fmt.Errorf("creating auctions topic: %v", err)
+		return fmt.Errorf("creating auction topic: %v", err)
 	}
 	auctions.SetEventHandler(s.eventHandler)
 	auctions.SetMessageHandler(s.auctionsHandler)
 
 	// Subscribe to our own wins topic
-	wins, err := s.peer.NewTopic(s.ctx, broker.WinsTopic(s.peer.Host().ID()), true)
+	wins, err := s.peer.NewTopic(s.ctx, auction.WinsTopic(s.peer.Host().ID()), true)
 	if err != nil {
 		if err := auctions.Close(); err != nil {
 			log.Errorf("closing auctions topic: %v", err)
@@ -256,7 +256,7 @@ func (s *Service) Subscribe(bootstrap bool) error {
 	wins.SetMessageHandler(s.winsHandler)
 
 	// Subscribe to our own proposals topic
-	props, err := s.peer.NewTopic(s.ctx, broker.ProposalsTopic(s.peer.Host().ID()), true)
+	props, err := s.peer.NewTopic(s.ctx, auction.ProposalsTopic(s.peer.Host().ID()), true)
 	if err != nil {
 		if err := auctions.Close(); err != nil {
 			log.Errorf("closing auctions topic: %v", err)
@@ -289,13 +289,13 @@ func (s *Service) ListBids(query bidstore.Query) ([]*bidstore.Bid, error) {
 }
 
 // GetBid gets the bid with specific ID.
-func (s *Service) GetBid(id broker.BidID) (*bidstore.Bid, error) {
+func (s *Service) GetBid(id auction.BidID) (*bidstore.Bid, error) {
 	return s.store.GetBid(id)
 }
 
 // WriteDataURI writes a data uri resource to the configured deal data directory.
 func (s *Service) WriteDataURI(payloadCid, uri string) (string, error) {
-	return s.store.WriteDataURI(broker.BidID(""), payloadCid, uri)
+	return s.store.WriteDataURI(auction.BidID(""), payloadCid, uri)
 }
 
 func (s *Service) eventHandler(from peer.ID, topic string, msg []byte) {
@@ -332,7 +332,7 @@ func (s *Service) winsHandler(from peer.ID, topic string, msg []byte) ([]byte, e
 		return nil, fmt.Errorf("unmarshaling message: %v", err)
 	}
 
-	if err := s.store.SetAwaitingProposalCid(broker.BidID(win.BidId)); err != nil {
+	if err := s.store.SetAwaitingProposalCid(auction.BidID(win.BidId)); err != nil {
 		return nil, fmt.Errorf("setting awaiting proposal cid: %v", err)
 	}
 
@@ -352,7 +352,7 @@ func (s *Service) proposalHandler(from peer.ID, topic string, msg []byte) ([]byt
 	if err != nil {
 		return nil, fmt.Errorf("decoding proposal cid: %v", err)
 	}
-	if err := s.store.SetProposalCid(broker.BidID(prop.BidId), pcid); err != nil {
+	if err := s.store.SetProposalCid(auction.BidID(prop.BidId), pcid); err != nil {
 		return nil, fmt.Errorf("setting proposal cid: %v", err)
 	}
 
@@ -360,23 +360,23 @@ func (s *Service) proposalHandler(from peer.ID, topic string, msg []byte) ([]byt
 	return nil, nil
 }
 
-func (s *Service) makeBid(auction *pb.Auction, from peer.ID) error {
-	if rejectReason := s.filterAuction(auction); rejectReason != "" {
-		log.Infof("not bidding in auction %s from %s: %s", auction.Id, from, rejectReason)
+func (s *Service) makeBid(a *pb.Auction, from peer.ID) error {
+	if rejectReason := s.filterAuction(a); rejectReason != "" {
+		log.Infof("not bidding in auction %s from %s: %s", a.Id, from, rejectReason)
 		return nil
 	}
 
-	if !s.bytesLimiter.Request(auction.DealSize) {
-		log.Infof("not bidding in auction %s from %s: would exceed the running total bytes limit", auction.Id, from)
+	if !s.bytesLimiter.Request(a.DealSize) {
+		log.Infof("not bidding in auction %s from %s: would exceed the running total bytes limit", a.Id, from)
 		return nil
 	}
 
-	sources, err := cast.SourcesFromPb(auction.Sources)
+	sources, err := cast.SourcesFromPb(a.Sources)
 	if err != nil {
 		return err
 	}
 	// Ensure we can fetch the data
-	dataURI, err := datauri.NewFromSources(auction.PayloadCid, sources)
+	dataURI, err := datauri.NewFromSources(a.PayloadCid, sources)
 	if err != nil {
 		return fmt.Errorf("parsing data uri: %v", err)
 	}
@@ -396,14 +396,14 @@ func (s *Service) makeBid(auction *pb.Auction, from peer.ID) error {
 		return fmt.Errorf("getting chain height: %v", err)
 	}
 	startEpoch := s.bidParams.DealStartWindow + currentEpoch
-	if auction.FilEpochDeadline > 0 && auction.FilEpochDeadline < startEpoch {
+	if a.FilEpochDeadline > 0 && a.FilEpochDeadline < startEpoch {
 		log.Infof("auction %s from %s requires epoch no later than %d, but I can only promise epoch %d, skip bidding",
-			auction.Id, from, auction.FilEpochDeadline, startEpoch)
+			a.Id, from, a.FilEpochDeadline, startEpoch)
 		return nil
 	}
 
 	// Create bids topic
-	topic, err := s.peer.NewTopic(s.ctx, broker.BidsTopic(broker.AuctionID(auction.Id)), false)
+	topic, err := s.peer.NewTopic(s.ctx, auction.BidsTopic(auction.AuctionID(a.Id)), false)
 	if err != nil {
 		return fmt.Errorf("creating bids topic: %v", err)
 	}
@@ -416,7 +416,7 @@ func (s *Service) makeBid(auction *pb.Auction, from peer.ID) error {
 
 	// Submit bid to auctioneer
 	bid := &pb.Bid{
-		AuctionId:        auction.Id,
+		AuctionId:        a.Id,
 		MinerAddr:        s.bidParams.MinerAddr,
 		WalletAddrSig:    s.bidParams.WalletAddrSig,
 		AskPrice:         s.bidParams.AskPrice,
@@ -428,7 +428,7 @@ func (s *Service) makeBid(auction *pb.Auction, from peer.ID) error {
 	if err != nil {
 		return fmt.Errorf("marshaling json: %v", err)
 	}
-	log.Infof("bidding in auction %s from %s: \n%s", auction.Id, from, string(bidj))
+	log.Infof("bidding in auction %s from %s: \n%s", a.Id, from, string(bidj))
 
 	msg, err := proto.Marshal(bid)
 	if err != nil {
@@ -447,18 +447,18 @@ func (s *Service) makeBid(auction *pb.Auction, from peer.ID) error {
 	}
 	id := r.Data
 
-	payloadCid, err := cid.Parse(auction.PayloadCid)
+	payloadCid, err := cid.Parse(a.PayloadCid)
 	if err != nil {
 		return fmt.Errorf("parsing payload cid: %v", err)
 	}
 	// Save bid locally
 	if err := s.store.SaveBid(bidstore.Bid{
-		ID:               broker.BidID(id),
-		AuctionID:        broker.AuctionID(auction.Id),
+		ID:               auction.BidID(id),
+		AuctionID:        auction.AuctionID(a.Id),
 		AuctioneerID:     from,
 		PayloadCid:       payloadCid,
-		DealSize:         auction.DealSize,
-		DealDuration:     auction.DealDuration,
+		DealSize:         a.DealSize,
+		DealDuration:     a.DealDuration,
 		Sources:          sources,
 		AskPrice:         bid.AskPrice,
 		VerifiedAskPrice: bid.VerifiedAskPrice,
@@ -468,7 +468,7 @@ func (s *Service) makeBid(auction *pb.Auction, from peer.ID) error {
 		return fmt.Errorf("saving bid: %v", err)
 	}
 
-	log.Debugf("created bid %s in auction %s", id, auction.Id)
+	log.Debugf("created bid %s in auction %s", id, a.Id)
 	return nil
 }
 

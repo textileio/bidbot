@@ -14,7 +14,7 @@ import (
 	"github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	"github.com/ipld/go-car"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 	golog "github.com/textileio/go-log/v2"
 )
 
@@ -40,7 +40,7 @@ type URI interface {
 }
 
 // NewFromSources returns a new URI from the given sources.
-func NewFromSources(payloadCid string, sources broker.Sources) (URI, error) {
+func NewFromSources(payloadCid string, sources auction.Sources) (URI, error) {
 	if sources.CARURL != nil {
 		return NewURI(payloadCid, sources.CARURL.URL.String())
 	}

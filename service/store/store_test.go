@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/logging"
 	"github.com/textileio/bidbot/lib/marketpeer"
 	lotusclientmocks "github.com/textileio/bidbot/lib/mocks/lotusclient"
@@ -51,11 +51,11 @@ func TestStore_ListBids(t *testing.T) {
 
 	limit := 100
 	now := time.Now()
-	ids := make([]broker.BidID, limit)
+	ids := make([]auction.BidID, limit)
 	for i := 0; i < limit; i++ {
 		now = now.Add(time.Millisecond)
-		id := broker.BidID(strings.ToLower(ulid.MustNew(ulid.Timestamp(now), rand.Reader).String()))
-		aid := broker.AuctionID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
+		id := auction.BidID(strings.ToLower(ulid.MustNew(ulid.Timestamp(now), rand.Reader).String()))
+		aid := auction.AuctionID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
 		_, sources, err := gw.CreateHTTPSources(true)
 		require.NoError(t, err)
 
@@ -293,8 +293,8 @@ func newBid(t *testing.T, dag format.DAGService, carAccessible bool) *Bid {
 	require.NoError(t, err)
 
 	now := time.Now()
-	id := broker.BidID(strings.ToLower(ulid.MustNew(ulid.Timestamp(now), rand.Reader).String()))
-	aid := broker.AuctionID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
+	id := auction.BidID(strings.ToLower(ulid.MustNew(ulid.Timestamp(now), rand.Reader).String()))
+	aid := auction.AuctionID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
 	return &Bid{
 		ID:               id,
 		AuctionID:        aid,

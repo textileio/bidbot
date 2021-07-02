@@ -16,7 +16,7 @@ import (
 	format "github.com/ipfs/go-ipld-format"
 	"github.com/ipld/go-car"
 	"github.com/multiformats/go-multihash"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
 )
 
 // DataURIHTTPGateway is a test http server for bidbot data uris.
@@ -43,15 +43,15 @@ func (g *DataURIHTTPGateway) Close() {
 	g.server.Close()
 }
 
-// CreateHTTPSources creates a uri and wraps it into broker.Sources.
-func (g *DataURIHTTPGateway) CreateHTTPSources(serve bool) (cid.Cid, broker.Sources, error) {
+// CreateHTTPSources creates a uri and wraps it into auction.Sources.
+func (g *DataURIHTTPGateway) CreateHTTPSources(serve bool) (cid.Cid, auction.Sources, error) {
 	cid, s, err := g.CreateURI(serve)
 	if err != nil {
-		return cid, broker.Sources{}, err
+		return cid, auction.Sources{}, err
 	}
 	u, _ := url.Parse(s)
-	return cid, broker.Sources{
-		CARURL: &broker.CARURL{
+	return cid, auction.Sources{
+		CARURL: &auction.CARURL{
 			URL: *u,
 		},
 	}, nil

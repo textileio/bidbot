@@ -25,18 +25,18 @@ import (
 	mbase "github.com/multiformats/go-multibase"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/textileio/bidbot/lib/broker"
+	"github.com/textileio/bidbot/lib/auction"
+	"github.com/textileio/bidbot/lib/common"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/lib/finalizer"
-	"github.com/textileio/bidbot/lib/lotusclient"
 	"github.com/textileio/bidbot/lib/marketpeer"
 	golog "github.com/textileio/go-log/v2"
 
 	"github.com/textileio/bidbot/httpapi"
-	"github.com/textileio/bidbot/lib/common"
 	"github.com/textileio/bidbot/service"
 	"github.com/textileio/bidbot/service/limiter"
+	"github.com/textileio/bidbot/service/lotusclient"
 	"github.com/textileio/bidbot/service/store"
 )
 
@@ -102,12 +102,12 @@ func init() {
 		},
 		{
 			Name:        "deal-duration-min",
-			DefValue:    broker.MinDealDuration,
+			DefValue:    auction.MinDealDuration,
 			Description: "Minimum deal duration to bid on in epochs; default is ~6 months",
 		},
 		{
 			Name:        "deal-duration-max",
-			DefValue:    broker.MaxDealDuration,
+			DefValue:    auction.MaxDealDuration,
 			Description: "Maximum deal duration to bid on in epochs; default is ~1 year",
 		},
 		{

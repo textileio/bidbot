@@ -1,9 +1,8 @@
 syntax = "proto3";
 package proto.v1.message;
-option go_package = "github.com/textileio/bidbot/gen/proto/v1/message;message";
+option go_package = "github.com/textileio/bidbot/gen/v1;message";
 
 import "google/protobuf/timestamp.proto";
-import "proto/v1/auctioneer.proto";
 
 message Auction {
     string id = 1;
@@ -11,7 +10,7 @@ message Auction {
     uint64 deal_size = 3;
     uint64 deal_duration = 4;
     uint64 fil_epoch_deadline = 5;
-    proto.v1.Sources sources = 6;
+    Sources sources = 6;
     google.protobuf.Timestamp ends_at = 7;
 }
 
@@ -34,4 +33,18 @@ message WinningBidProposal {
     string auction_id = 1;
     string bid_id = 2;
     string proposal_cid = 3;
+}
+
+message Sources {
+  CARURL car_url = 1;
+  CARIPFS car_ipfs = 2;
+
+  message CARURL {
+    string URL = 1;
+  }
+
+  message CARIPFS {
+    string cid = 1;
+    repeated string multiaddrs = 2;
+  }
 }
