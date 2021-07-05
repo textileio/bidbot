@@ -1,6 +1,6 @@
 name: Release
-# this workflow pushes docker images to textile/bidbot for updates on main branch, any new tags, and commits with `[shipit]` in message.
-# it also creates new releases with linux binaries on GitHub for any new tags.
+# this workflow pushes docker images to textile/bidbot for updates on main branch, any version tags, and commits with `[shipit]` in message.
+# it also creates new releases with linux binaries on GitHub for any version tags.
 
 on:
   push:
