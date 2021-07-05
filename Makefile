@@ -12,8 +12,9 @@ lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run
 .PHONYY: lint
 
+
 build: $(GOVVV)
-	$(BIN_BUILD_FLAGS) go build -ldflags="${GOVVV_FLAGS}" ./...
+	$(BIN_BUILD_FLAGS) go build -ldflags="${GOVVV_FLAGS}" .
 .PHONY: build
 
 mocks: $(MOCKERY) clean-mocks
