@@ -17,6 +17,10 @@ build: $(GOVVV)
 	$(BIN_BUILD_FLAGS) go build -ldflags="${GOVVV_FLAGS}" .
 .PHONY: build
 
+install: $(GOVVV)
+	$(BIN_BUILD_FLAGS) go install -ldflags="${GOVVV_FLAGS}" .
+.PHONY: install
+
 mocks: $(MOCKERY) clean-mocks
 	$(MOCKERY) --name="(FilClient|LotusClient)" --keeptree --recursive
 .PHONY: mocks
