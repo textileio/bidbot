@@ -9,11 +9,11 @@ COPY go.mod go.sum ./
 RUN go mod download -x
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
-  BIN_BUILD_FLAGS="CGO_ENABLED=0 GOOS=linux" make build-bidbot
+  BIN_BUILD_FLAGS="CGO_ENABLED=0 GOOS=linux" make build
 
 FROM alpine
 COPY --from=builder /app/bidbot /app/bidbot
-COPY --from=builder /app/cmd/bidbot/bin/container_daemon /app/start_bidbot
+COPY --from=builder /app/bin/container_daemon /app/start_bidbot
 WORKDIR /app
 
 ENV BIDBOT_PATH /data/bidbot
