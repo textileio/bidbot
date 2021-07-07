@@ -88,7 +88,7 @@ func (c *Client) HealthCheck() error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
-	_, err := c.c.MarketListDeals(ctx)
+	_, err := c.c.ID(ctx)
 	return err
 }
 
