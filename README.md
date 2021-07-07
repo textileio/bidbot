@@ -12,8 +12,8 @@ Join us on our [public Slack channel](https://slack.textile.io/) for news, discu
 
 - [Installation](#installation)
 - [What is the Storage Broker](#what-is-the-storage-broker)
-- [How do I connect with the system?](#how-do-i-connect-to-the-system)
-- [Useful `bidbot` commands](#useful-bidbot-commands)
+- [How do I connect with the system?](#how-do-i-connect-with-the-system)
+- [Useful `bidbot` commands](#useful-bidbot-operational-commands)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 - [License](#license)
