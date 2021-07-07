@@ -88,7 +88,7 @@ func (c *Client) HealthCheck() error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
-	_, err := c.c.DealsList(ctx)
+	_, err := c.c.MarketListDeals(ctx)
 	return err
 }
 
@@ -99,7 +99,7 @@ func (c *Client) ImportData(pcid cid.Cid, file string) error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
-	if err := c.c.DealsImportData(ctx, pcid, file); err != nil {
+	if err := c.c.MarketImportDealData(ctx, pcid, file); err != nil {
 		return fmt.Errorf("calling storage miner deals import data: %w", err)
 	}
 	return nil
