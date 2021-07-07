@@ -34,6 +34,8 @@ The storage broker (SB) is a system that receives data from multiple clients, ag
 2. Miners bid on deals in real time to offer the best storage solution for each payload.
 3. All deals are offline deals, not online deals. Miners download the data to create the deal.
 
+**Currently, you might see a infrequent stream of Auctions happening, just leave it running**
+
 ### How it works
 
 Whenever the SB has aggregates a minimum threshold of data, it attempts to make deals with miners. Data payloads awaiting storage is described by the usual attributes you're familiar with in Filecoin:
@@ -66,11 +68,9 @@ The SB relies on offline deals to make deals with miners. After you win an aucti
 
 # How do I connect with the system?
 
-The hypothetical scenario in the previous section obviously didn't explain how you would really send bids or interact with the SB. The following diagram will help to get better picture:
+The hypothetical scenario in the previous section obviously didn't explain how you would really send bids or interact with the SB. The following diagram will help to get a better picture:
 
-![https://s3-us-west-2.amazonaws.com/secure.notion-static.com/1c618f5d-5dde-4eb4-804a-833288193370/Untitled.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/1c618f5d-5dde-4eb4-804a-833288193370/Untitled.png)
-
-[https://excalidraw.com/#json=5156979584532480,PvHnuGMcokVCf3DAg4BPcA](https://excalidraw.com/#json=5156979584532480,PvHnuGMcokVCf3DAg4BPcA)
+![https://user-images.githubusercontent.com/6136245/124800912-97025680-df2c-11eb-9052-350adbad0d51.png](https://user-images.githubusercontent.com/6136245/124800912-97025680-df2c-11eb-9052-350adbad0d51.png)
 
 To connect to the system, you will install `bidbot`, a daemon that you run on your infrastructure. 
 
@@ -98,17 +98,16 @@ Here're the steps to do it:
 
 Bidbot will store the downloaded CAR files in `~/.bidbot/deal_data` by default. This directory should be accessible by your Lotus daemon for the CAR import step to work correctly. 
 
-The default download folder would probably work if you run `bidbot` in the same host as your Lotus node. If you want to run `bidbot` and the Lotus node in separate hosts, you should set up a shared volume and change the BIDBOT_DEAL_DATA_DIRECTORY environment variable to change the download folder target.
+
+**Important**: The default download folder would probably work if you run `bidbot` in the same host as your Lotus node. If you want to run `bidbot` and the Lotus node in separate hosts, you should set up a shared volume and change the BIDBOT_DEAL_DATA_DIRECTORY environment variable to change the download folder target.
 
 # How does this fit in my current miner infrastructure?
 
 The following diagram shows how bidbot, SB, and your lotus-miner interact:
 
-[https://excalidraw.com/#json=5896220618784768,Ic-elVdSVtfzvptUAbp0hQ](https://excalidraw.com/#json=5896220618784768,Ic-elVdSVtfzvptUAbp0hQ)
+![https://user-images.githubusercontent.com/6136245/124801028-bb5e3300-df2c-11eb-8547-af5d72e55993.png](https://user-images.githubusercontent.com/6136245/124801028-bb5e3300-df2c-11eb-8547-af5d72e55993.png)
 
-![https://s3-us-west-2.amazonaws.com/secure.notion-static.com/35a3121c-a878-4943-b621-f98200380e3a/Untitled.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/35a3121c-a878-4943-b621-f98200380e3a/Untitled.png)
-
-Note: you can install `bidbot` on the same host as your miner daemon, but there's a reasonable chance that you might want to avoid that for security reasons.
+**Note**: you can install `bidbot` on the same host as your miner daemon, but there's a reasonable chance that you might want to avoid that for security reasons.
 
 ## OK, I've it running, what I should see?
 
