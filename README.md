@@ -34,7 +34,7 @@ The storage broker (SB) is a system that receives data from multiple clients, ag
 2. Miners bid on deals in real time to offer the best storage solution for each payload.
 3. All deals are offline deals, not online deals. Miners download the data to create the deal.
 
-**Currently, you might see a infrequent stream of Auctions happening, just leave it running**
+Currently the storage-broker is creating a slow stream of auctions, so you might see _nothing happening_ when running `bidbot`. This is expected for some time, so unless you see errors in your logs you can leave the daemon running.
 
 ### How it works
 
