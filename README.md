@@ -11,7 +11,9 @@ Join us on our [public Slack channel](https://slack.textile.io/) for news, discu
 ## Table of Contents
 
 - [Installation](#installation)
-- [Getting Started](#getting-started)
+- [What is the Storage Broker](#what-is-the-storage-broker)
+- [How do I connect with the system?](#how-do-i-connect-to-the-system)
+- [Useful `bidbot` commands](#useful-bidbot-commands)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 - [License](#license)
