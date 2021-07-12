@@ -226,7 +226,8 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
     bidbot daemon --miner-addr [address] 
                   --wallet-addr-sig [signature] 
 		  --lotus-miner-api-maddr [lotus-miner-api-maddr] 
-		  --lotus-miner-api-token [lotus-miner-api-token]
+		  --lotus-miner-api-token [lotus-miner-api-token-with-write-access]
+		  --deal-start-epoch [correct-deal-start-epoch-window-for-your-miner]
 
 Note: In the event you win an auction, you must use this wallet address to make the deal(s).
 
