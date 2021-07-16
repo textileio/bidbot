@@ -141,7 +141,7 @@ func ParseStringSlice(v *viper.Viper, key string) []string {
 // MarshalConfig marshals a *viper.Viper config to JSON. pretty controls if the
 // result is indented or not. It replaces the masked fields with three
 // asterisks, if they are present.
-func MarshalConfig(v *viper.Viper, pretty bool, maskedFields []string) ([]byte, error) {
+func MarshalConfig(v *viper.Viper, pretty bool, maskedFields ...string) ([]byte, error) {
 	all := v.AllSettings()
 	for _, f := range maskedFields {
 		if _, exists := all[f]; exists {

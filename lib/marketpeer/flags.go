@@ -182,5 +182,5 @@ func WriteConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string) (string, e
 
 // MarshalConfig marshals a *viper.Viper config to JSON.
 func MarshalConfig(v *viper.Viper, pretty bool) ([]byte, error) {
-	return common.MarshalConfig(v, pretty, []string{"private-key", "wallet-addr-sig"})
+	return common.MarshalConfig(v, pretty, "private-key", "wallet-addr-sig")
 }
