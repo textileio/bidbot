@@ -2,7 +2,6 @@ package marketpeer
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -183,11 +182,5 @@ func WriteConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string) (string, e
 
 // MarshalConfig marshals a *viper.Viper config to JSON.
 func MarshalConfig(v *viper.Viper, pretty bool) ([]byte, error) {
-	all := v.AllSettings()
-	all["private-key"] = "***"
-	all["wallet-addr-sig"] = "***"
-	if pretty {
-		return json.MarshalIndent(all, "", "  ")
-	}
-	return json.Marshal(all)
+	return common.MarshalConfig(v, pretty, []string{"private-key", "wallet-addr-sig"})
 }
