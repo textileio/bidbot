@@ -94,7 +94,7 @@ func (u *HTTPURI) Validate(ctx context.Context) error {
 		return fmt.Errorf("http request returned bad status %d: %w", res.StatusCode, ErrCarFileUnavailable)
 	}
 
-	log.Debugf("validating car file uri: %s", u.uri)
+	log.Debugf("validating car file cid: %s", u.cid)
 	if _, err := validateCarHeader(u.cid, res.Body); err != nil {
 		return fmt.Errorf("validating car header: %w", err)
 	}
@@ -117,7 +117,7 @@ func (u *HTTPURI) Write(ctx context.Context, writer io.Writer) error {
 		return fmt.Errorf("http request returned bad status %d: %w", res.StatusCode, ErrCarFileUnavailable)
 	}
 
-	log.Debugf("validating car file uri: %s", u.uri)
+	log.Debugf("validating car file cid: %s", u.cid)
 	r, err := validateCarHeader(u.cid, res.Body)
 	if err != nil {
 		return fmt.Errorf("validating car header: %w", err)
@@ -163,7 +163,7 @@ func validateCarHeader(root cid.Cid, reader io.Reader) (io.Reader, error) {
 		return nil, fmt.Errorf("car file must have only one root: %w", ErrInvalidCarFile)
 	}
 	if !ch.Roots[0].Equals(root) {
-		return nil, fmt.Errorf("car file root does not match uri: %w", ErrInvalidCarFile)
+		return nil, fmt.Errorf("car file root does not match cid: %w", ErrInvalidCarFile)
 	}
 
 	return io.MultiReader(bytes.NewReader(phb), bytes.NewReader(hb), buf), nil
