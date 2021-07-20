@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/textileio/bidbot/lib/auction"
+	"github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/marketpeer"
-	"github.com/textileio/bidbot/service/datauri"
 	bidstore "github.com/textileio/bidbot/service/store"
 	golog "github.com/textileio/go-log/v2"
 )
