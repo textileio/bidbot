@@ -21,12 +21,12 @@ import (
 	pb "github.com/textileio/bidbot/gen/v1"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/cast"
+	"github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/lib/finalizer"
 	"github.com/textileio/bidbot/lib/marketpeer"
 
-	"github.com/textileio/bidbot/service/datauri"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	bidstore "github.com/textileio/bidbot/service/store"

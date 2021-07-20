@@ -7,10 +7,10 @@ import (
 	format "github.com/ipfs/go-ipld-format"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	. "github.com/textileio/bidbot/lib/datauri"
+	"github.com/textileio/bidbot/lib/datauri/apitest"
 	"github.com/textileio/bidbot/lib/finalizer"
 	"github.com/textileio/bidbot/lib/marketpeer"
-	. "github.com/textileio/bidbot/service/datauri"
-	"github.com/textileio/bidbot/service/datauri/apitest"
 )
 
 var testCid = "bafybeic6xu6afw5lg6a6h6uk27twq3bmzxjg346nhsyenuhxwzfv6yhu5y"
