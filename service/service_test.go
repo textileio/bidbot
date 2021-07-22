@@ -11,10 +11,10 @@ import (
 	core "github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/logging"
-	"github.com/textileio/bidbot/lib/marketpeer"
 	filclientmocks "github.com/textileio/bidbot/lib/mocks/filclient"
 	lotusclientmocks "github.com/textileio/bidbot/lib/mocks/lotusclient"
 	"github.com/textileio/bidbot/service"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
 )
 
@@ -26,7 +26,7 @@ func init() {
 	if err := logging.SetLogLevels(map[string]golog.LogLevel{
 		"bidbot/service": golog.LevelDebug,
 		"bidbot/store":   golog.LevelDebug,
-		"mpeer":          golog.LevelDebug,
+		"psrpc/peer":     golog.LevelDebug,
 	}); err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func TestNew(t *testing.T) {
 	}
 
 	config := service.Config{
-		Peer: marketpeer.Config{
+		Peer: peer.Config{
 			PrivKey:    priv,
 			RepoPath:   dir,
 			EnableMDNS: true,

@@ -13,7 +13,7 @@ import (
 	"github.com/filecoin-project/lotus/api/v0api"
 	"github.com/filecoin-project/lotus/chain/types"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/textileio/bidbot/lib/finalizer"
+	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
 )
 
 var requestTimeout = time.Second * 10

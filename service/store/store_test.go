@@ -13,7 +13,7 @@ import (
 	format "github.com/ipfs/go-ipld-format"
 	"github.com/ipld/go-car"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	core "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,10 +21,10 @@ import (
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri/apitest"
 	"github.com/textileio/bidbot/lib/logging"
-	"github.com/textileio/bidbot/lib/marketpeer"
 	lotusclientmocks "github.com/textileio/bidbot/lib/mocks/lotusclient"
 	"github.com/textileio/bidbot/service/limiter"
 	badger "github.com/textileio/go-ds-badger3"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
 )
 
@@ -46,7 +46,7 @@ func TestStore_ListBids(t *testing.T) {
 
 	sk, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	auctioneerID, err := peer.IDFromPrivateKey(sk)
+	auctioneerID, err := core.IDFromPrivateKey(sk)
 	require.NoError(t, err)
 
 	limit := 100
@@ -255,7 +255,7 @@ func newStore(t *testing.T) (*Store, format.DAGService, blockstore.Blockstore) {
 	require.NoError(t, err)
 	sk, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	p, err := marketpeer.New(marketpeer.Config{
+	p, err := peer.New(peer.Config{
 		RepoPath: t.TempDir(),
 		PrivKey:  sk,
 	})
@@ -289,7 +289,7 @@ func newBid(t *testing.T, dag format.DAGService, carAccessible bool) *Bid {
 
 	sk, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	auctioneerID, err := peer.IDFromPrivateKey(sk)
+	auctioneerID, err := core.IDFromPrivateKey(sk)
 	require.NoError(t, err)
 
 	now := time.Now()

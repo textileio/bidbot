@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	core "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri"
-	"github.com/textileio/bidbot/lib/marketpeer"
 	bidstore "github.com/textileio/bidbot/service/store"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
 )
 
@@ -27,7 +27,7 @@ func TestAPI_Deals(t *testing.T) {
 	// auctioneerID has to be populated to avoid unmarshal error
 	sk, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	auctioneerID, err := peer.IDFromPrivateKey(sk)
+	auctioneerID, err := core.IDFromPrivateKey(sk)
 	require.NoError(t, err)
 
 	unspecified := &bidstore.Bid{AuctioneerID: auctioneerID}
@@ -150,7 +150,7 @@ type mockService struct {
 	mock.Mock
 }
 
-func (s *mockService) PeerInfo() (*marketpeer.PeerInfo, error) {
+func (s *mockService) PeerInfo() (*peer.Info, error) {
 	panic("not implemented")
 }
 
