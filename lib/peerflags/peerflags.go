@@ -1,4 +1,4 @@
-package marketpeer
+package peerflags
 
 import (
 	"crypto/rand"
@@ -12,9 +12,10 @@ import (
 	mbase "github.com/multiformats/go-multibase"
 	"github.com/spf13/viper"
 	"github.com/textileio/bidbot/lib/common"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 )
 
-// Flags defines daemon flags for a marketpeer.
+// Flags defines daemon flags for github.com/textileio/go-libp2p-pubsub-rpc/peer.
 var Flags = []common.Flag{
 	{
 		Name:        "fake-mode",
@@ -95,25 +96,25 @@ var Flags = []common.Flag{
 }
 
 // GetConfig returns a Config from a *viper.Viper instance.
-func GetConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string, isAuctioneer bool) (Config, error) {
+func GetConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string, isAuctioneer bool) (peer.Config, error) {
 	if v.GetString("private-key") == "" {
-		return Config{}, fmt.Errorf("--private-key is required. Run 'init' to generate a new keypair")
+		return peer.Config{}, fmt.Errorf("--private-key is required. Run 'init' to generate a new keypair")
 	}
 
 	_, key, err := mbase.Decode(v.GetString("private-key"))
 	if err != nil {
-		return Config{}, fmt.Errorf("decoding private key: %v", err)
+		return peer.Config{}, fmt.Errorf("decoding private key: %v", err)
 	}
 	priv, err := crypto.UnmarshalPrivateKey(key)
 	if err != nil {
-		return Config{}, fmt.Errorf("unmarshaling private key: %v", err)
+		return peer.Config{}, fmt.Errorf("unmarshaling private key: %v", err)
 	}
 
 	repoPath := os.Getenv(repoPathEnv)
 	if repoPath == "" {
 		repoPath = defaultRepoPath
 	}
-	return Config{
+	return peer.Config{
 		RepoPath:           repoPath,
 		PrivKey:            priv,
 		ListenMultiaddrs:   common.ParseStringSlice(v, "listen-multiaddr"),

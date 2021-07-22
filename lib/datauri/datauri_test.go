@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	. "github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/datauri/apitest"
-	"github.com/textileio/bidbot/lib/finalizer"
-	"github.com/textileio/bidbot/lib/marketpeer"
+	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 )
 
 var testCid = "bafybeic6xu6afw5lg6a6h6uk27twq3bmzxjg346nhsyenuhxwzfv6yhu5y"
@@ -72,7 +72,7 @@ func createDagService(t *testing.T) format.DAGService {
 	t.Cleanup(func() {
 		require.NoError(t, fin.Cleanup(nil))
 	})
-	p, err := marketpeer.New(marketpeer.Config{RepoPath: dir})
+	p, err := peer.New(peer.Config{RepoPath: dir})
 	require.NoError(t, err)
 	fin.Add(p)
 	return p.DAGService()

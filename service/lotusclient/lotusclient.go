@@ -12,7 +12,7 @@ import (
 	"github.com/ipfs/go-cid"
 	ma "github.com/multiformats/go-multiaddr"
 	dns "github.com/multiformats/go-multiaddr-dns"
-	"github.com/textileio/bidbot/lib/finalizer"
+	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
 	golog "github.com/textileio/go-log/v2"
 )
 

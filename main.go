@@ -21,23 +21,22 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/joho/godotenv"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
+	core "github.com/libp2p/go-libp2p-core/peer"
 	mbase "github.com/multiformats/go-multibase"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/textileio/bidbot/httpapi"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/common"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/filclient"
-	"github.com/textileio/bidbot/lib/finalizer"
-	"github.com/textileio/bidbot/lib/marketpeer"
-	golog "github.com/textileio/go-log/v2"
-
-	"github.com/textileio/bidbot/httpapi"
+	"github.com/textileio/bidbot/lib/peerflags"
 	"github.com/textileio/bidbot/service"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	"github.com/textileio/bidbot/service/store"
+	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
+	golog "github.com/textileio/go-log/v2"
 )
 
 var (
@@ -149,7 +148,7 @@ Also take the file system overhead into consideration when calculating the limit
 		{Name: "log-debug", DefValue: false, Description: "Enable debug level log"},
 		{Name: "log-json", DefValue: false, Description: "Enable structured logging"},
 	}
-	daemonFlags = append(daemonFlags, marketpeer.Flags...)
+	daemonFlags = append(daemonFlags, peerflags.Flags...)
 	dealsFlags := []common.Flag{{Name: "json", DefValue: false,
 		Description: "output in json format instead of tabular print"}}
 	dealsListFlags := []common.Flag{{Name: "status", DefValue: "",
@@ -164,7 +163,7 @@ Also take the file system overhead into consideration when calculating the limit
 	})
 
 	common.ConfigureCLI(v, "BIDBOT", commonFlags, rootCmd.PersistentFlags())
-	common.ConfigureCLI(v, "BIDBOT", marketpeer.Flags, initCmd.PersistentFlags())
+	common.ConfigureCLI(v, "BIDBOT", peerflags.Flags, initCmd.PersistentFlags())
 	common.ConfigureCLI(v, "BIDBOT", daemonFlags, daemonCmd.PersistentFlags())
 	common.ConfigureCLI(v, "BIDBOT", dealsFlags, dealsCmd.PersistentFlags())
 	common.ConfigureCLI(v, "BIDBOT", dealsListFlags, dealsListCmd.PersistentFlags())
@@ -202,7 +201,7 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 `,
 	Args: cobra.ExactArgs(0),
 	Run: func(c *cobra.Command, args []string) {
-		path, err := marketpeer.WriteConfig(v, "BIDBOT_PATH", defaultConfigPath)
+		path, err := peerflags.WriteConfig(v, "BIDBOT_PATH", defaultConfigPath)
 		common.CheckErrf("writing config: %v", err)
 		fmt.Printf("Initialized configuration file: %s\n\n", path)
 
@@ -210,7 +209,7 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 		common.CheckErrf("decoding private key: %v", err)
 		priv, err := crypto.UnmarshalPrivateKey(key)
 		common.CheckErrf("unmarshaling private key: %v", err)
-		id, err := peer.IDFromPrivateKey(priv)
+		id, err := core.IDFromPrivateKey(priv)
 		common.CheckErrf("getting peer id: %v", err)
 
 		signingToken := hex.EncodeToString([]byte(id))
@@ -250,9 +249,9 @@ var daemonCmd = &cobra.Command{
 			"bidbot/datauri",
 			"bidbot/api",
 			"bidbot/lotus",
-			"mpeer",
-			"mpeer/pubsub",
-			"mpeer/mdns",
+			"psrpc",
+			"psrpc/peer",
+			"psrpc/mdns",
 		})
 		common.CheckErrf("setting log levels: %v", err)
 	},
@@ -264,10 +263,10 @@ var daemonCmd = &cobra.Command{
 			common.CheckErr(errors.New("--wallet-addr-sig is required. See 'bidbot help init' for instructions"))
 		}
 
-		pconfig, err := marketpeer.GetConfig(v, "BIDBOT_PATH", defaultConfigPath, false)
+		pconfig, err := peerflags.GetConfig(v, "BIDBOT_PATH", defaultConfigPath, false)
 		common.CheckErrf("getting peer config: %v", err)
 
-		settings, err := marketpeer.MarshalConfig(v, !v.GetBool("log-json"))
+		settings, err := peerflags.MarshalConfig(v, !v.GetBool("log-json"))
 		common.CheckErrf("marshaling config: %v", err)
 		log.Infof("loaded config: %s", string(settings))
 

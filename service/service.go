@@ -13,23 +13,21 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p-core/peer"
+	core "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/oklog/ulid/v2"
-	golog "github.com/textileio/go-log/v2"
-	"google.golang.org/protobuf/proto"
-
 	pb "github.com/textileio/bidbot/gen/v1"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/cast"
 	"github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/filclient"
-	"github.com/textileio/bidbot/lib/finalizer"
-	"github.com/textileio/bidbot/lib/marketpeer"
-
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	bidstore "github.com/textileio/bidbot/service/store"
+	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
+	golog "github.com/textileio/go-log/v2"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -44,7 +42,7 @@ var (
 
 // Config defines params for Service configuration.
 type Config struct {
-	Peer           marketpeer.Config
+	Peer           peer.Config
 	BidParams      BidParams
 	AuctionFilters AuctionFilters
 	BytesLimiter   limiter.Limiter
@@ -133,7 +131,7 @@ func (f *MinMaxFilter) Validate() error {
 
 // Service is a miner service that subscribes to brokered deals.
 type Service struct {
-	peer       *marketpeer.Peer
+	peer       *peer.Peer
 	fc         filclient.FilClient
 	store      *bidstore.Store
 	subscribed bool
@@ -165,7 +163,7 @@ func New(
 	fin.Add(finalizer.NewContextCloser(cancel))
 
 	// Create miner peer
-	p, err := marketpeer.New(conf.Peer)
+	p, err := peer.New(conf.Peer)
 	if err != nil {
 		return nil, fin.Cleanupf("creating peer: %v", err)
 	}
@@ -279,7 +277,7 @@ func (s *Service) Subscribe(bootstrap bool) error {
 }
 
 // PeerInfo returns the public information of the market peer.
-func (s *Service) PeerInfo() (*marketpeer.PeerInfo, error) {
+func (s *Service) PeerInfo() (*peer.Info, error) {
 	return s.peer.Info()
 }
 
@@ -295,36 +293,36 @@ func (s *Service) GetBid(id auction.BidID) (*bidstore.Bid, error) {
 
 // WriteDataURI writes a data uri resource to the configured deal data directory.
 func (s *Service) WriteDataURI(payloadCid, uri string) (string, error) {
-	return s.store.WriteDataURI(auction.BidID(""), payloadCid, uri)
+	return s.store.WriteDataURI("", payloadCid, uri)
 }
 
-func (s *Service) eventHandler(from peer.ID, topic string, msg []byte) {
+func (s *Service) eventHandler(from core.ID, topic string, msg []byte) {
 	log.Debugf("%s peer event: %s %s", topic, from, msg)
 }
 
-func (s *Service) auctionsHandler(from peer.ID, topic string, msg []byte) ([]byte, error) {
+func (s *Service) auctionsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
 	log.Debugf("%s received auction from %s", topic, from)
 
-	auction := &pb.Auction{}
-	if err := proto.Unmarshal(msg, auction); err != nil {
+	a := &pb.Auction{}
+	if err := proto.Unmarshal(msg, a); err != nil {
 		return nil, fmt.Errorf("unmarshaling message: %v", err)
 	}
 
-	auctionj, err := json.MarshalIndent(auction, "", "  ")
+	ajson, err := json.MarshalIndent(a, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("marshaling json: %v", err)
 	}
-	log.Infof("received auction %s from %s: \n%s", auction.Id, from, string(auctionj))
+	log.Infof("received auction %s from %s: \n%s", a.Id, from, string(ajson))
 
 	go func() {
-		if err := s.makeBid(auction, from); err != nil {
+		if err := s.makeBid(a, from); err != nil {
 			log.Errorf("making bid: %v", err)
 		}
 	}()
 	return nil, nil
 }
 
-func (s *Service) winsHandler(from peer.ID, topic string, msg []byte) ([]byte, error) {
+func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
 	log.Debugf("%s received win from %s", topic, from)
 
 	win := &pb.WinningBid{}
@@ -340,7 +338,7 @@ func (s *Service) winsHandler(from peer.ID, topic string, msg []byte) ([]byte, e
 	return nil, nil
 }
 
-func (s *Service) proposalHandler(from peer.ID, topic string, msg []byte) ([]byte, error) {
+func (s *Service) proposalHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
 	log.Debugf("%s received proposal from %s", topic, from)
 
 	prop := &pb.WinningBidProposal{}
@@ -360,7 +358,7 @@ func (s *Service) proposalHandler(from peer.ID, topic string, msg []byte) ([]byt
 	return nil, nil
 }
 
-func (s *Service) makeBid(a *pb.Auction, from peer.ID) error {
+func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	if rejectReason := s.filterAuction(a); rejectReason != "" {
 		log.Infof("not bidding in auction %s from %s: %s", a.Id, from, rejectReason)
 		return nil

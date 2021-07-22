@@ -10,8 +10,8 @@ import (
 
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri"
-	"github.com/textileio/bidbot/lib/marketpeer"
 	bidstore "github.com/textileio/bidbot/service/store"
+	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
 )
 
@@ -21,7 +21,7 @@ var (
 
 // Service provides scoped access to the bidbot service.
 type Service interface {
-	PeerInfo() (*marketpeer.PeerInfo, error)
+	PeerInfo() (*peer.Info, error)
 	ListBids(query bidstore.Query) ([]*bidstore.Bid, error)
 	GetBid(id auction.BidID) (*bidstore.Bid, error)
 	WriteDataURI(payloadCid, uri string) (string, error)
