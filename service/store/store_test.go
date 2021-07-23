@@ -21,7 +21,7 @@ import (
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri/apitest"
 	"github.com/textileio/bidbot/lib/logging"
-	lotusclientmocks "github.com/textileio/bidbot/lib/mocks/lotusclient"
+	lotusclientmocks "github.com/textileio/bidbot/mocks/service/lotusclient"
 	"github.com/textileio/bidbot/service/limiter"
 	badger "github.com/textileio/go-ds-badger3"
 	"github.com/textileio/go-libp2p-pubsub-rpc/peer"

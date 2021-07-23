@@ -42,10 +42,11 @@ var (
 
 // Config defines params for Service configuration.
 type Config struct {
-	Peer           peer.Config
-	BidParams      BidParams
-	AuctionFilters AuctionFilters
-	BytesLimiter   limiter.Limiter
+	Peer                peer.Config
+	BidParams           BidParams
+	AuctionFilters      AuctionFilters
+	BytesLimiter        limiter.Limiter
+	SealingSectorsLimit int
 }
 
 // BidParams defines how bids are made.
@@ -133,12 +134,14 @@ func (f *MinMaxFilter) Validate() error {
 type Service struct {
 	peer       *peer.Peer
 	fc         filclient.FilClient
+	lc         lotusclient.LotusClient
 	store      *bidstore.Store
 	subscribed bool
 
-	bidParams      BidParams
-	auctionFilters AuctionFilters
-	bytesLimiter   limiter.Limiter
+	bidParams           BidParams
+	auctionFilters      AuctionFilters
+	bytesLimiter        limiter.Limiter
+	sealingSectorsLimit int
 
 	ctx       context.Context
 	finalizer *finalizer.Finalizer
@@ -169,7 +172,6 @@ func New(
 	}
 	fin.Add(p)
 
-	bytesLimiter := limiter.NopeLimiter{}
 	// Create bid store
 	s, err := bidstore.NewStore(
 		store,
@@ -179,7 +181,7 @@ func New(
 		conf.BidParams.DealDataDirectory,
 		conf.BidParams.DealDataFetchAttempts,
 		conf.BidParams.DiscardOrphanDealsAfter,
-		bytesLimiter,
+		conf.BytesLimiter,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)
@@ -199,14 +201,16 @@ func New(
 	}
 
 	srv := &Service{
-		peer:           p,
-		fc:             fc,
-		store:          s,
-		bidParams:      conf.BidParams,
-		auctionFilters: conf.AuctionFilters,
-		bytesLimiter:   bytesLimiter,
-		ctx:            ctx,
-		finalizer:      fin,
+		peer:                p,
+		fc:                  fc,
+		lc:                  lc,
+		store:               s,
+		bidParams:           conf.BidParams,
+		auctionFilters:      conf.AuctionFilters,
+		bytesLimiter:        conf.BytesLimiter,
+		sealingSectorsLimit: conf.SealingSectorsLimit,
+		ctx:                 ctx,
+		finalizer:           fin,
 	}
 	log.Info("service started")
 
@@ -367,6 +371,17 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	if !s.bytesLimiter.Request(a.DealSize) {
 		log.Infof("not bidding in auction %s from %s: would exceed the running total bytes limit", a.Id, from)
 		return nil
+	}
+
+	if s.sealingSectorsLimit > 0 {
+		n, err := s.lc.CurrentSealingSectors()
+		if err != nil {
+			return fmt.Errorf("getting number of sealing sectors: %v", err)
+		}
+		if n >= s.sealingSectorsLimit {
+			log.Infof("not bidding: lotus already have %d sealing sectors", n)
+			return nil
+		}
 	}
 
 	sources, err := cast.SourcesFromPb(a.Sources)

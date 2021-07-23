@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/lotus/api/v0api"
+	"github.com/filecoin-project/lotus/api"
 	"github.com/ipfs/go-cid"
 	ma "github.com/multiformats/go-multiaddr"
 	dns "github.com/multiformats/go-multiaddr-dns"
@@ -26,12 +26,13 @@ var (
 type LotusClient interface {
 	io.Closer
 	HealthCheck() error
+	CurrentSealingSectors() (int, error)
 	ImportData(pcid cid.Cid, file string) error
 }
 
 // Client provides access to Lotus for importing deal data.
 type Client struct {
-	c        v0api.StorageMiner
+	c        api.StorageMiner
 	fakeMode bool
 
 	ctx       context.Context
@@ -92,6 +93,33 @@ func (c *Client) HealthCheck() error {
 	return err
 }
 
+// CurrentSealingSectors returns the total number of sectors considered to be in sealing.
+func (c *Client) CurrentSealingSectors() (int, error) {
+	// these are the sector states mapping to sstProving
+	// https://github.com/filecoin-project/lotus/blob/v1.10.0/extern/storage-sealing/sector_state.go#L109
+	// which are the only states considered not in sealing
+	// https://github.com/filecoin-project/lotus/blob/v1.10.0/extern/storage-sealing/stats.go#L65
+	// hardcode here to avoid importing tons of dependencies.
+	notSealingStates := []string{"Proving", "Removed", "Removing",
+		"Terminating", "TerminateWait", "TerminateFinality", "TerminateFailed"}
+
+	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
+	defer cancel()
+	sectorsByState, err := c.c.SectorsSummary(ctx)
+	if err != nil {
+		return 0, err
+	}
+	total := 0
+	for _, i := range sectorsByState {
+		total += i
+	}
+	notSealing := 0
+	for _, s := range notSealingStates {
+		notSealing += sectorsByState[api.SectorState(s)]
+	}
+	return total - notSealing, nil
+}
+
 // ImportData imports deal data into Lotus.
 func (c *Client) ImportData(pcid cid.Cid, file string) error {
 	if c.fakeMode {
@@ -105,7 +133,7 @@ func (c *Client) ImportData(pcid cid.Cid, file string) error {
 	return nil
 }
 
-type clientBuilder func(ctx context.Context) (*v0api.StorageMinerStruct, func(), error)
+type clientBuilder func(ctx context.Context) (*api.StorageMinerStruct, func(), error)
 
 func newBuilder(maddrs string, authToken string, connRetries int) (clientBuilder, error) {
 	maddr, err := ma.NewMultiaddr(maddrs)
@@ -120,8 +148,8 @@ func newBuilder(maddrs string, authToken string, connRetries int) (clientBuilder
 		"Authorization": []string{"Bearer " + authToken},
 	}
 
-	return func(ctx context.Context) (*v0api.StorageMinerStruct, func(), error) {
-		var api v0api.StorageMinerStruct
+	return func(ctx context.Context) (*api.StorageMinerStruct, func(), error) {
+		var api api.StorageMinerStruct
 		var closer jsonrpc.ClientCloser
 		var err error
 		for i := 0; i < connRetries; i++ {
