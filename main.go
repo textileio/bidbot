@@ -131,7 +131,13 @@ func init() {
 In the form of '10MiB/1m', '500 tb/24h' or '5 PiB / 128h', etc.
 See https://en.wikipedia.org/wiki/Byte#Multiple-byte_units for valid byte units.
 Default to no limit. Be aware that the bytes counter resets when bidbot restarts.
-Also take the file system overhead into consideration when calculating the limit.`,
+Also take the file system overhead into consideration when calculating the limit.
+No limit by default.`,
+		},
+		{
+			Name:        "sealing-sectors-limit",
+			DefValue:    0,
+			Description: "If set, stop bidding if the number of Lotus sealing sectors exceeds this limit.",
 		},
 		{
 			Name:        "deal-data-fetch-attempts",
@@ -334,7 +340,8 @@ var daemonCmd = &cobra.Command{
 					Max: v.GetUint64("deal-size-max"),
 				},
 			},
-			BytesLimiter: bytesLimiter,
+			BytesLimiter:        bytesLimiter,
+			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 		}
 		serv, err := service.New(config, store, lc, fc)
 		common.CheckErrf("starting service: %v", err)
