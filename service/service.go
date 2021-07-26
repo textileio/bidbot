@@ -378,7 +378,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		if err != nil {
 			return fmt.Errorf("getting number of sealing sectors: %v", err)
 		}
-		if n >= s.sealingSectorsLimit {
+		if n > s.sealingSectorsLimit {
 			log.Infof("not bidding: lotus already have %d sealing sectors", n)
 			return nil
 		}

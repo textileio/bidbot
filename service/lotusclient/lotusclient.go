@@ -105,9 +105,11 @@ func (c *Client) CurrentSealingSectors() (int, error) {
 
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
+	start := time.Now()
 	sectorsByState, err := c.c.SectorsSummary(ctx)
+	log.Debugf("SectorsSummary() call took %.2f seconds", time.Since(start).Seconds())
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("getting lotus sectors summary: %s", err)
 	}
 	total := 0
 	for _, i := range sectorsByState {
