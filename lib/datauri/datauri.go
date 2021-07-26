@@ -80,7 +80,7 @@ func (u *HTTPURI) Cid() cid.Cid {
 // Validate checks the integrity of the car file.
 // The cid associated with the uri must be the one and only root of the car file.
 func (u *HTTPURI) Validate(ctx context.Context) error {
-	res, err := u.getRequest(ctx)
+	res, err := u.getRequest(ctx, withHeader(auction.HTTPCarHeaderOnly, "true"))
 	if err != nil {
 		return fmt.Errorf("get request: %v", err)
 	}
@@ -134,10 +134,13 @@ func (u *HTTPURI) String() string {
 	return u.uri
 }
 
-func (u *HTTPURI) getRequest(ctx context.Context) (*http.Response, error) {
+func (u *HTTPURI) getRequest(ctx context.Context, extraHeaders ...headerModifier) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", u.uri, nil)
 	if err != nil {
 		return nil, fmt.Errorf("building http request: %v", err)
+	}
+	for _, f := range extraHeaders {
+		req.Header = f(req.Header)
 	}
 	client := &http.Client{}
 	res, err := client.Do(req)
@@ -193,4 +196,13 @@ func ldRead(r *bufio.Reader) ([]byte, []byte, error) {
 	_ = binary.PutUvarint(ubuf, l)
 
 	return ubuf, buf, nil
+}
+
+type headerModifier func(h http.Header) http.Header
+
+func withHeader(k, v string) headerModifier {
+	return func(h http.Header) http.Header {
+		h.Add(k, v)
+		return h
+	}
 }

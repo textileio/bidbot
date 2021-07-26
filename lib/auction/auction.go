@@ -18,6 +18,10 @@ const (
 	MinDealDuration = epochsPerDay * 365 / 2 // ~6 months
 	// MaxDealDuration is the maximum allowed deal duration in epochs requested of miners.
 	MaxDealDuration = epochsPerDay * 510 // As far as we know, is the safest max duration that all miners accept.
+
+	// HTTPCarHeaderOnly is a HTTP header indicating that the bidbot wants
+	// only the CAR file header, as a hint to the HTTP server.
+	HTTPCarHeaderOnly = "X-Bidbot-Car-Header-Only"
 )
 
 // BidID is a unique identifier for a Bid.
