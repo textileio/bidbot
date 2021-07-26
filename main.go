@@ -135,9 +135,10 @@ Also take the file system overhead into consideration when calculating the limit
 No limit by default.`,
 		},
 		{
-			Name:        "sealing-sectors-limit",
-			DefValue:    0,
-			Description: "If set, stop bidding if the number of Lotus sealing sectors exceeds this limit.",
+			Name:     "sealing-sectors-limit",
+			DefValue: 0,
+			Description: `If bigger than zero, stop bidding if the number of Lotus sealing sectors exceeds this limit.
+Zero means no limits`,
 		},
 		{
 			Name:        "deal-data-fetch-attempts",
