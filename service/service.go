@@ -430,7 +430,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	// Submit bid to auctioneer
 	bid := &pb.Bid{
 		AuctionId:        a.Id,
-		MinerAddr:        s.bidParams.MinerAddr,
+		MinerId:          s.bidParams.MinerAddr,
 		WalletAddrSig:    s.bidParams.WalletAddrSig,
 		AskPrice:         s.bidParams.AskPrice,
 		VerifiedAskPrice: s.bidParams.VerifiedAskPrice,
