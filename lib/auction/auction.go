@@ -41,10 +41,9 @@ type Bid struct {
 
 // WinningBid contains details about a winning bid.
 type WinningBid struct {
-	BidderID                peer.ID
-	Acknowledged            bool // Whether or not the bidder acknowledged receipt of the win
-	ProposalCid             cid.Cid
-	ProposalCidAcknowledged bool // Whether or not the bidder acknowledged receipt of the proposal Cid
+	BidderID    peer.ID
+	ProposalCid cid.Cid
+	ErrorCause  string // an error that may have occurred when delivering the proposal cid
 }
 
 // CARURL contains details of a CAR file stored in an HTTP endpoint.
@@ -92,10 +91,10 @@ func (s Sources) String() string {
 	var b strings.Builder
 	_, _ = b.WriteString("{")
 	if s.CARURL != nil {
-		fmt.Fprintf(&b, "url: %s,", s.CARURL.URL.String())
+		_, _ = fmt.Fprintf(&b, "url: %s,", s.CARURL.URL.String())
 	}
 	if s.CARIPFS != nil {
-		fmt.Fprintf(&b, "cid: %s,", s.CARIPFS.Cid.String())
+		_, _ = fmt.Fprintf(&b, "cid: %s,", s.CARIPFS.Cid.String())
 	}
 	_, _ = b.WriteString("}")
 	return b.String()

@@ -34,7 +34,7 @@ var (
 	log = golog.Logger("bidbot/service")
 
 	// bidsAckTimeout is the max duration bidbot will wait for an ack after bidding in an auction.
-	bidsAckTimeout = time.Second * 10
+	bidsAckTimeout = time.Second * 30
 
 	// dataURIValidateTimeout is the timeout used when validating a data uri.
 	dataURIValidateTimeout = time.Minute
