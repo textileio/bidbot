@@ -239,7 +239,7 @@ func (s *Service) Subscribe(bootstrap bool) error {
 	}
 
 	// Subscribe to the global auctions topic
-	auctions, err := s.peer.NewTopic(s.ctx, auction.AuctionTopic, true)
+	auctions, err := s.peer.NewTopic(s.ctx, auction.Topic, true)
 	if err != nil {
 		return fmt.Errorf("creating auction topic: %v", err)
 	}
@@ -416,7 +416,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	}
 
 	// Create bids topic
-	topic, err := s.peer.NewTopic(s.ctx, auction.BidsTopic(auction.AuctionID(a.Id)), false)
+	topic, err := s.peer.NewTopic(s.ctx, auction.BidsTopic(auction.ID(a.Id)), false)
 	if err != nil {
 		return fmt.Errorf("creating bids topic: %v", err)
 	}
@@ -467,7 +467,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	// Save bid locally
 	if err := s.store.SaveBid(bidstore.Bid{
 		ID:               auction.BidID(id),
-		AuctionID:        auction.AuctionID(a.Id),
+		AuctionID:        auction.ID(a.Id),
 		AuctioneerID:     from,
 		PayloadCid:       payloadCid,
 		DealSize:         a.DealSize,

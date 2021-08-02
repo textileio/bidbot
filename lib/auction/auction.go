@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -26,25 +24,6 @@ const (
 
 // BidID is a unique identifier for a Bid.
 type BidID string
-
-// Bid defines the core bid model.
-type Bid struct {
-	MinerAddr        string
-	WalletAddrSig    []byte
-	BidderID         peer.ID
-	AskPrice         int64 // attoFIL per GiB per epoch
-	VerifiedAskPrice int64 // attoFIL per GiB per epoch
-	StartEpoch       uint64
-	FastRetrieval    bool
-	ReceivedAt       time.Time
-}
-
-// WinningBid contains details about a winning bid.
-type WinningBid struct {
-	BidderID    peer.ID
-	ProposalCid cid.Cid
-	ErrorCause  string // an error that may have occurred when delivering the proposal cid
-}
 
 // CARURL contains details of a CAR file stored in an HTTP endpoint.
 type CARURL struct {
