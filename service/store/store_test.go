@@ -55,7 +55,7 @@ func TestStore_ListBids(t *testing.T) {
 	for i := 0; i < limit; i++ {
 		now = now.Add(time.Millisecond)
 		id := auction.BidID(strings.ToLower(ulid.MustNew(ulid.Timestamp(now), rand.Reader).String()))
-		aid := auction.AuctionID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
+		aid := auction.ID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
 		_, sources, err := gw.CreateHTTPSources(true)
 		require.NoError(t, err)
 
@@ -294,7 +294,7 @@ func newBid(t *testing.T, dag format.DAGService, carAccessible bool) *Bid {
 
 	now := time.Now()
 	id := auction.BidID(strings.ToLower(ulid.MustNew(ulid.Timestamp(now), rand.Reader).String()))
-	aid := auction.AuctionID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
+	aid := auction.ID(strings.ToLower(ulid.MustNew(ulid.Now(), rand.Reader).String()))
 	return &Bid{
 		ID:               id,
 		AuctionID:        aid,

@@ -70,7 +70,7 @@ var (
 // Bid defines the core bid model from a miner's perspective.
 type Bid struct {
 	ID                   auction.BidID
-	AuctionID            auction.AuctionID
+	AuctionID            auction.ID
 	AuctioneerID         peer.ID
 	PayloadCid           cid.Cid
 	DealSize             uint64
