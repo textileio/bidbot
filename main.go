@@ -96,8 +96,8 @@ func init() {
 		},
 		{
 			Name:        "deal-start-window",
-			DefValue:    60 * 24 * 2,
-			Description: "Number of epochs after which won deals must start on-chain; default is ~one day",
+			DefValue:    0,
+			Description: "Number of epochs after which won deals must start on-chain; required",
 		},
 		{
 			Name:        "deal-duration-min",
@@ -233,7 +233,7 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
                   --wallet-addr-sig [signature] 
 		  --lotus-miner-api-maddr [lotus-miner-api-maddr] 
 		  --lotus-miner-api-token [lotus-miner-api-token-with-write-access]
-		  --deal-start-epoch [correct-deal-start-epoch-window-for-your-miner]
+		  --deal-start-window [correct-deal-start-epoch-window-for-your-miner]
 
 Note: In the event you win an auction, you must use this wallet address to make the deal(s).
 
