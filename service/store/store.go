@@ -316,6 +316,10 @@ func (s *Store) SetAwaitingProposalCid(id auction.BidID) error {
 	if err != nil {
 		return err
 	}
+	if b.Status == BidStatusAwaitingProposal {
+		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
+		return nil
+	}
 	if b.Status != BidStatusSubmitted {
 		return fmt.Errorf("expect bid to have status '%s', got '%s'", BidStatusSubmitted, b.Status)
 	}
