@@ -317,7 +317,7 @@ func (s *Store) SetAwaitingProposalCid(id auction.BidID) error {
 		return err
 	}
 	if b.Status != BidStatusSubmitted {
-		return fmt.Errorf("bid must have status '%s'", BidStatusSubmitted)
+		return fmt.Errorf("expect bid to have status '%s', got '%s'", BidStatusSubmitted, b.Status)
 	}
 	if err := s.saveAndTransitionStatus(txn, b, BidStatusAwaitingProposal); err != nil {
 		return fmt.Errorf("updating bid: %v", err)
@@ -348,7 +348,7 @@ func (s *Store) SetProposalCid(id auction.BidID, pcid cid.Cid) error {
 		return err
 	}
 	if b.Status != BidStatusAwaitingProposal {
-		return fmt.Errorf("bid must have status '%s'", BidStatusAwaitingProposal)
+		return fmt.Errorf("expect bid to have status '%s', got '%s'", BidStatusAwaitingProposal, b.Status)
 	}
 
 	b.ProposalCid = pcid
