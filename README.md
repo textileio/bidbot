@@ -98,7 +98,7 @@ Here're the steps to do it:
 6. Good luck! Your `bidbot` will automatically bid in open deal auctions. If it wins an auction, the broker will automatically start making a deal with the Lotus miner address used in step 4.
 
 Important configuration considerations for step 5.:
-- Bidbot will store the downloaded CAR files in `~/.bidbot/deal_data` by default. This directory should be accessible by your Lotus daemon for the CAR import step to work correctly. 
+- Bidbot will store the downloaded CAR files in `~/.bidbot/deal_data` by default. This directory should be accessible by your Lotus-miner for the CAR import step to work correctly. 
 - You should set correctly your `--deal-start-epoch` value to match your miner node configuration. If this value is incorrectly set, your miner node will reject proposals because the `DealStartEpoch` attribute is too soon for you to accept.
 - The `--lotus-miner-api-token` should have `write` access.
 
