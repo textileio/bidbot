@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gogo/status"
@@ -202,7 +203,7 @@ func CheckErrf(format string, err error) {
 // HandleInterrupt attempts to cleanup while allowing the user to force stop the process.
 func HandleInterrupt(cleanup func()) {
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	fmt.Println("Gracefully stopping... (press Ctrl+C again to force)")
 	cleanup()
