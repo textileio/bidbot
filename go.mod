@@ -40,7 +40,7 @@ require (
 	github.com/textileio/go-datastore-extensions v1.0.1
 	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
 	github.com/textileio/go-ds-mongo v0.1.4
-	github.com/textileio/go-libp2p-pubsub-rpc v0.0.2
+	github.com/textileio/go-libp2p-pubsub-rpc v0.0.4
 	github.com/textileio/go-log/v2 v2.1.3-gke-1
 	github.com/urfave/cli/v2 v2.3.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.21.0
