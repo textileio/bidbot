@@ -94,7 +94,7 @@ func idHandler(service Service) http.HandlerFunc {
 }
 
 func versionHandler(w http.ResponseWriter, _ *http.Request) {
-	_, _ := w.Write([]byte(buildinfo.Summary()))
+	_, _ = w.Write([]byte(buildinfo.Summary()))
 }
 
 func dealsHandler(service Service) http.HandlerFunc {
