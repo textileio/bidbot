@@ -411,6 +411,7 @@ var versionCmd = &cobra.Command{
 			fmt.Println(local)
 			return
 		}
+		fmt.Println("WARNING! You local and remote version don't match:")
 		fmt.Printf("local%s\n", local)
 		fmt.Printf("\ndaemon%s\n", remote)
 	},
