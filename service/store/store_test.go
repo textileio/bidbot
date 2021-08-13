@@ -34,8 +34,6 @@ func init() {
 	}); err != nil {
 		panic(err)
 	}
-
-	DataURIFetchTimeout = time.Second * 5
 }
 
 func TestStore_ListBids(t *testing.T) {
@@ -260,7 +258,7 @@ func newStore(t *testing.T) (*Store, format.DAGService, blockstore.Blockstore) {
 		PrivKey:  sk,
 	})
 	require.NoError(t, err)
-	s, err := NewStore(ds, p.Host(), p.DAGService(), newLotusClientMock(), t.TempDir(), 2, 0, limiter.NopeLimiter{})
+	s, err := NewStore(ds, p.Host(), p.DAGService(), newLotusClientMock(), t.TempDir(), 2, 0, limiter.NopeLimiter{}, 1<<30)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, s.Close())

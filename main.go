@@ -126,6 +126,12 @@ func init() {
 			Description: "The timeout before discarding deal with no progress",
 		},
 		{
+			Name:     "est-download-speed",
+			DefValue: "5MB",
+			Description: `The estimated download speed per second, to govern the timeouts downloading CAR files.
+Be conservative to leave enough room for network instability.`,
+		},
+		{
 			Name:     "running-bytes-limit",
 			DefValue: "",
 			Description: `Maximum running total bytes in the deals to bid for a period of time.
@@ -312,8 +318,10 @@ var daemonCmd = &cobra.Command{
 			dealDataDirectory = filepath.Join(defaultConfigPath, "deal_data")
 		}
 
-		var bytesLimiter limiter.Limiter = limiter.NopeLimiter{}
+		estDownloadSpeed, err := humanize.ParseBytes(v.GetString("est-download-speed"))
+		common.CheckErrf("parsing est-download-speed: %v", err)
 
+		var bytesLimiter limiter.Limiter = limiter.NopeLimiter{}
 		if limit := v.GetString("running-bytes-limit"); limit != "" {
 			lim, err := parseRunningBytesLimit(limit)
 			common.CheckErrf(fmt.Sprintf("parsing '%s': %%w", limit), err)
@@ -344,6 +352,7 @@ var daemonCmd = &cobra.Command{
 				},
 			},
 			BytesLimiter:        bytesLimiter,
+			EstDownloadSpeed:    estDownloadSpeed,
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 		}
 		serv, err := service.New(config, store, lc, fc)
