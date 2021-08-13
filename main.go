@@ -127,7 +127,7 @@ func init() {
 		},
 		{
 			Name:     "est-download-speed",
-			DefValue: "5MB",
+			DefValue: "1MB",
 			Description: `The estimated download speed per second, to govern the timeouts downloading CAR files.
 Be conservative to leave enough room for network instability.`,
 		},

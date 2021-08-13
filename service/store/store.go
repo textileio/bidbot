@@ -49,7 +49,7 @@ var (
 	DefaultDataURIFetchTimeout = time.Hour * 10
 
 	// MaxDataURIFetchConcurrency is the maximum number of data uri fetches that will be handled concurrently.
-	MaxDataURIFetchConcurrency = 10
+	MaxDataURIFetchConcurrency = 3
 
 	// ErrBidNotFound indicates the requested bid was not found.
 	ErrBidNotFound = errors.New("bid not found")
