@@ -25,6 +25,7 @@ import (
 	mbase "github.com/multiformats/go-multibase"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/textileio/bidbot/buildinfo"
 	"github.com/textileio/bidbot/httpapi"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/common"
@@ -57,7 +58,7 @@ func init() {
 	}
 	_ = godotenv.Load(filepath.Join(configPath, ".env"))
 
-	rootCmd.AddCommand(initCmd, daemonCmd, idCmd, dealsCmd, downloadCmd)
+	rootCmd.AddCommand(initCmd, daemonCmd, idCmd, versionCmd, dealsCmd, downloadCmd)
 	dealsCmd.AddCommand(dealsListCmd)
 	dealsCmd.AddCommand(dealsShowCmd)
 
@@ -273,9 +274,10 @@ var daemonCmd = &cobra.Command{
 		pconfig, err := peerflags.GetConfig(v, "BIDBOT_PATH", defaultConfigPath, false)
 		common.CheckErrf("getting peer config: %v", err)
 
-		settings, err := peerflags.MarshalConfig(v, !v.GetBool("log-json"))
+		settings, err := common.MarshalConfig(v, !v.GetBool("log-json"),
+			"private-key", "wallet-addr-sig", "lotus-miner-api-token")
 		common.CheckErrf("marshaling config: %v", err)
-		log.Infof("loaded config: %s", string(settings))
+		log.Infof("loaded config from %s: %s", v.ConfigFileUsed(), string(settings))
 
 		fin := finalizer.NewFinalizer()
 		repoPath := os.Getenv("BIDBOT_PATH")
@@ -377,6 +379,40 @@ var idCmd = &cobra.Command{
 			log.Fatalf("%s: %s", res.Status, string(b))
 		}
 		fmt.Println(string(b))
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "shows current version of bidbot",
+	Args:  cobra.ExactArgs(0),
+	Run: func(c *cobra.Command, args []string) {
+		local := buildinfo.Summary()
+		fail := func(format string, vars ...interface{}) {
+			fmt.Printf("local%s\n", local)
+			log.Fatalf(format, vars...)
+		}
+		res, err := http.Get(urlFor("version"))
+		if err != nil {
+			fail(err.Error())
+		}
+		defer func() {
+			err := res.Body.Close()
+			if err != nil {
+				fail(err.Error())
+			}
+		}()
+		b, _ := ioutil.ReadAll(res.Body)
+		if res.StatusCode != http.StatusOK {
+			fail("%s: %s", res.Status, string(b))
+		}
+		remote := string(b)
+		if remote == local {
+			fmt.Println(local)
+			return
+		}
+		fmt.Printf("local%s\n", local)
+		fmt.Printf("\ndaemon%s\n", remote)
 	},
 }
 

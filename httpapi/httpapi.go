@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/textileio/bidbot/buildinfo"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri"
 	bidstore "github.com/textileio/bidbot/service/store"
@@ -48,6 +49,7 @@ func createMux(service Service) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", getOnly(healthHandler))
 	mux.HandleFunc("/id", getOnly(idHandler(service)))
+	mux.HandleFunc("/version", getOnly(versionHandler))
 	// allow both with and without trailing slash
 	deals := getOnly(dealsHandler(service))
 	mux.HandleFunc("/deals", deals)
@@ -89,6 +91,10 @@ func idHandler(service Service) http.HandlerFunc {
 			log.Errorf("write failed: %v", err)
 		}
 	}
+}
+
+func versionHandler(w http.ResponseWriter, _ *http.Request) {
+	_, _ := w.Write([]byte(buildinfo.Summary()))
 }
 
 func dealsHandler(service Service) http.HandlerFunc {
