@@ -46,6 +46,7 @@ type Config struct {
 	BidParams           BidParams
 	AuctionFilters      AuctionFilters
 	BytesLimiter        limiter.Limiter
+	EstDownloadSpeed    uint64
 	SealingSectorsLimit int
 }
 
@@ -182,6 +183,7 @@ func New(
 		conf.BidParams.DealDataFetchAttempts,
 		conf.BidParams.DiscardOrphanDealsAfter,
 		conf.BytesLimiter,
+		conf.EstDownloadSpeed,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)
@@ -297,7 +299,7 @@ func (s *Service) GetBid(id auction.BidID) (*bidstore.Bid, error) {
 
 // WriteDataURI writes a data uri resource to the configured deal data directory.
 func (s *Service) WriteDataURI(payloadCid, uri string) (string, error) {
-	return s.store.WriteDataURI("", payloadCid, uri)
+	return s.store.WriteDataURI("", payloadCid, uri, 0)
 }
 
 func (s *Service) eventHandler(from core.ID, topic string, msg []byte) {

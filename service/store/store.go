@@ -45,8 +45,8 @@ var (
 	// DataURIFetchStartDelay is the time delay before the store will process queued data uri fetches on start.
 	DataURIFetchStartDelay = time.Second * 10
 
-	// DataURIFetchTimeout is the timeout used when fetching data uris.
-	DataURIFetchTimeout = time.Hour * 3
+	// DefaultDataURIFetchTimeout is the timeout used when fetching data uris of unknown size.
+	DefaultDataURIFetchTimeout = time.Hour * 10
 
 	// MaxDataURIFetchConcurrency is the maximum number of data uri fetches that will be handled concurrently.
 	MaxDataURIFetchConcurrency = 10
@@ -157,6 +157,7 @@ type Store struct {
 
 	dealDataDirectory     string
 	dealDataFetchAttempts uint32
+	estDownloadSpeed      uint64
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -174,6 +175,7 @@ func NewStore(
 	dealDataFetchAttempts uint32,
 	discardOrphanDealsAfter time.Duration,
 	bytesLimiter limiter.Limiter,
+	estDownloadSpeed uint64,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
@@ -186,6 +188,7 @@ func NewStore(
 		tickCh:                make(chan struct{}, MaxDataURIFetchConcurrency),
 		dealDataDirectory:     dealDataDirectory,
 		dealDataFetchAttempts: dealDataFetchAttempts,
+		estDownloadSpeed:      estDownloadSpeed,
 		ctx:                   ctx,
 		cancel:                cancel,
 	}
@@ -467,13 +470,13 @@ func (s *Store) ListBids(query Query) ([]*Bid, error) {
 // WriteDealData writes the deal data to the configured deal data directory.
 func (s *Store) WriteDealData(b *Bid) (string, error) {
 	if b.Sources.CARURL != nil {
-		return s.WriteDataURI(b.ID, b.PayloadCid.String(), b.Sources.CARURL.URL.String())
+		return s.WriteDataURI(b.ID, b.PayloadCid.String(), b.Sources.CARURL.URL.String(), b.DealSize)
 	}
 	return "", errors.New("not implemented")
 }
 
 // WriteDataURI writes the uri resource to the configured deal data directory.
-func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string) (string, error) {
+func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size uint64) (string, error) {
 	duri, err := datauri.NewURI(payloadCid, uri)
 	if err != nil {
 		return "", fmt.Errorf("parsing data uri: %w", err)
@@ -491,7 +494,13 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string) (strin
 	if _, err := f.Seek(0, 0); err != nil {
 		return "", fmt.Errorf("seeking file to the beginning: %v", err)
 	}
-	ctx, cancel := context.WithTimeout(s.ctx, DataURIFetchTimeout)
+	fetchTimeout := DefaultDataURIFetchTimeout
+	if size != 0 {
+		// add baseline timeout for very small files
+		fetchTimeout = time.Minute + time.Duration(size/s.estDownloadSpeed)*time.Second
+	}
+	log.Debugf("fetching %s with timeout of %v", uri, fetchTimeout)
+	ctx, cancel := context.WithTimeout(s.ctx, fetchTimeout)
 	defer cancel()
 	if err := duri.Write(ctx, f); err != nil {
 		return "", fmt.Errorf("writing data uri %s: %w", uri, err)
