@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -48,6 +49,7 @@ var (
 
 	dealsListFields = []string{"ID", "DealSize", "DealDuration", "Status", "AskPrice", "VerifiedAskPrice",
 		"StartEpoch", "DataURIFetchAttempts", "CreatedAt", "ErrorCause"}
+	validStorageProviderID = regexp.MustCompile("^[a-z]0[0-9]+$")
 )
 
 func init() {
@@ -73,7 +75,12 @@ func init() {
 		{
 			Name:        "miner-addr",
 			DefValue:    "",
-			Description: "Miner address (fxxxx); required",
+			Description: "Miner address (f0xxxx); depreciated, use storage-provider-id",
+		},
+		{
+			Name:        "storage-provider-id",
+			DefValue:    "",
+			Description: "Storage Provider ID (f0xxxx); required",
 		},
 		{
 			Name:        "wallet-addr-sig",
@@ -242,7 +249,7 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 
 2. Start listening for deal auctions using the wallet address and signature from step 1:
 
-    bidbot daemon --miner-addr [address] 
+    bidbot daemon --storage-provider-id [id] 
                   --wallet-addr-sig [signature] 
 		  --lotus-miner-api-maddr [lotus-miner-api-maddr] 
 		  --lotus-miner-api-token [lotus-miner-api-token-with-write-access]
@@ -276,9 +283,17 @@ var daemonCmd = &cobra.Command{
 		common.CheckErrf("setting log levels: %v", err)
 	},
 	Run: func(c *cobra.Command, args []string) {
-		if v.GetString("miner-addr") == "" {
-			common.CheckErr(errors.New("--miner-addr is required. See 'bidbot help init' for instructions"))
+		storageProviderID := v.GetString("storage-provider-id")
+		if storageProviderID == "" {
+			storageProviderID = v.GetString("miner-addr") // fallback to support existing config
 		}
+		if storageProviderID == "" {
+			common.CheckErr(errors.New("--storage-provider-id is required. See 'bidbot help init' for instructions"))
+		}
+		if !validStorageProviderID.MatchString(storageProviderID) {
+			common.CheckErr(errors.New("--storage-provider-id should be in the form of f0xxxx"))
+		}
+
 		if v.GetString("wallet-addr-sig") == "" {
 			common.CheckErr(errors.New("--wallet-addr-sig is required. See 'bidbot help init' for instructions"))
 		}
@@ -337,7 +352,7 @@ var daemonCmd = &cobra.Command{
 		config := service.Config{
 			Peer: pconfig,
 			BidParams: service.BidParams{
-				MinerAddr:               v.GetString("miner-addr"),
+				StorageProviderID:       storageProviderID,
 				WalletAddrSig:           walletAddrSig,
 				AskPrice:                v.GetInt64("ask-price"),
 				VerifiedAskPrice:        v.GetInt64("verified-ask-price"),
