@@ -52,8 +52,8 @@ type Config struct {
 
 // BidParams defines how bids are made.
 type BidParams struct {
-	// MinerAddr is your Filecoin miner address used to make deals.
-	MinerAddr string
+	// StorageProviderID is your Filecoin StorageProvider ID used to make deals.
+	StorageProviderID string
 	// WalletAddrSig is a signature from your owner Lotus wallet address used to authenticate bids.
 	WalletAddrSig []byte
 
@@ -190,16 +190,16 @@ func New(
 	}
 	fin.Add(s)
 
-	// Verify miner address
+	// Verify StorageProvider ID
 	ok, err := fc.VerifyBidder(
 		conf.BidParams.WalletAddrSig,
 		p.Host().ID(),
-		conf.BidParams.MinerAddr)
+		conf.BidParams.StorageProviderID)
 	if err != nil {
-		return nil, fin.Cleanupf("verifying miner address: %v", err)
+		return nil, fin.Cleanupf("verifying StorageProvider ID: %v", err)
 	}
 	if !ok {
-		return nil, fin.Cleanup(fmt.Errorf("invalid miner address or signature"))
+		return nil, fin.Cleanup(fmt.Errorf("invalid StorageProvider ID or signature"))
 	}
 
 	srv := &Service{
@@ -431,13 +431,13 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 
 	// Submit bid to auctioneer
 	bid := &pb.Bid{
-		AuctionId:        a.Id,
-		MinerAddr:        s.bidParams.MinerAddr,
-		WalletAddrSig:    s.bidParams.WalletAddrSig,
-		AskPrice:         s.bidParams.AskPrice,
-		VerifiedAskPrice: s.bidParams.VerifiedAskPrice,
-		StartEpoch:       startEpoch,
-		FastRetrieval:    s.bidParams.FastRetrieval,
+		AuctionId:         a.Id,
+		StorageProviderId: s.bidParams.StorageProviderID,
+		WalletAddrSig:     s.bidParams.WalletAddrSig,
+		AskPrice:          s.bidParams.AskPrice,
+		VerifiedAskPrice:  s.bidParams.VerifiedAskPrice,
+		StartEpoch:        startEpoch,
+		FastRetrieval:     s.bidParams.FastRetrieval,
 	}
 	bidj, err := json.MarshalIndent(bid, "", "  ")
 	if err != nil {

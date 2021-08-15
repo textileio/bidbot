@@ -16,7 +16,7 @@ message Auction {
 
 message Bid {
     string auction_id = 1;
-    string miner_addr = 2;
+    string storage_provider_id = 2;
     bytes wallet_addr_sig = 3;
     int64 ask_price = 4;
     int64 verified_ask_price = 5;

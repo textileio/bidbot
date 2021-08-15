@@ -22,7 +22,7 @@ var requestTimeout = time.Second * 10
 type FilClient interface {
 	io.Closer
 
-	VerifyBidder(bidderSig []byte, bidderID peer.ID, minerAddr string) (bool, error)
+	VerifyBidder(bidderSig []byte, bidderID peer.ID, storageProviderID string) (bool, error)
 	GetChainHeight() (uint64, error)
 }
 
@@ -63,7 +63,7 @@ func (fc *LotusFilClient) Close() error {
 
 // VerifyBidder ensures that the wallet address authorized the use of bidder peer.ID to make bids.
 // Miner's authorize a bidding peer.ID by signing it with a wallet address private key.
-func (fc *LotusFilClient) VerifyBidder(bidderSig []byte, bidderID peer.ID, minerAddrStr string) (bool, error) {
+func (fc *LotusFilClient) VerifyBidder(bidderSig []byte, bidderID peer.ID, storageProviderIDStr string) (bool, error) {
 	if fc.fakeMode {
 		return true, nil
 	}
@@ -73,13 +73,13 @@ func (fc *LotusFilClient) VerifyBidder(bidderSig []byte, bidderID peer.ID, miner
 		return false, fmt.Errorf("unmarshaling signature: %v", err)
 	}
 
-	minerAddr, err := address.NewFromString(minerAddrStr)
+	storageProviderID, err := address.NewFromString(storageProviderIDStr)
 	if err != nil {
-		return false, fmt.Errorf("parsing miner address: %v", err)
+		return false, fmt.Errorf("parsing StorageProvider ID: %v", err)
 	}
 	ctx, cancel := context.WithTimeout(fc.ctx, requestTimeout)
 	defer cancel()
-	mi, err := fc.fullNode.StateMinerInfo(ctx, minerAddr, types.EmptyTSK)
+	mi, err := fc.fullNode.StateMinerInfo(ctx, storageProviderID, types.EmptyTSK)
 	if err != nil {
 		return false, fmt.Errorf("calling full node state miner info: %v", err)
 	}
