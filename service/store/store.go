@@ -28,6 +28,7 @@ import (
 	"github.com/textileio/bidbot/service/lotusclient"
 	dsextensions "github.com/textileio/go-datastore-extensions"
 	golog "github.com/textileio/go-log/v2"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -162,7 +163,8 @@ type Store struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	wg sync.WaitGroup
+	wg         sync.WaitGroup
+	semImports *semaphore.Weighted // can be nil
 }
 
 // NewStore returns a new Store.
@@ -175,6 +177,7 @@ func NewStore(
 	dealDataFetchAttempts uint32,
 	discardOrphanDealsAfter time.Duration,
 	bytesLimiter limiter.Limiter,
+	concurrentImports int,
 	estDownloadSpeed uint64,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -191,6 +194,9 @@ func NewStore(
 		estDownloadSpeed:      estDownloadSpeed,
 		ctx:                   ctx,
 		cancel:                cancel,
+	}
+	if concurrentImports > 0 {
+		s.semImports = semaphore.NewWeighted(int64(concurrentImports))
 	}
 
 	if err := s.HealthCheck(); err != nil {
@@ -588,7 +594,19 @@ func (s *Store) fetchWorker(num int) {
 			} else {
 				log.Infof("importing %s to lotus with proposal cid %s", file, b.ProposalCid)
 
-				if err := s.lc.ImportData(b.ProposalCid, file); err != nil {
+				// if requested, limit the number of concurrent imports
+				if s.semImports != nil {
+					// the error returned by Acquire is
+					// always ctx.Err(), in this case never
+					// happens.
+					_ = s.semImports.Acquire(context.Background(), 1)
+				}
+				err = s.lc.ImportData(b.ProposalCid, file)
+				if s.semImports != nil {
+					s.semImports.Release(1)
+				}
+
+				if err != nil {
 					status = fail(b, err)
 					logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
 				} else {

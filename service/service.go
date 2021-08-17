@@ -46,6 +46,7 @@ type Config struct {
 	BidParams           BidParams
 	AuctionFilters      AuctionFilters
 	BytesLimiter        limiter.Limiter
+	ConcurrentImports   int
 	EstDownloadSpeed    uint64
 	SealingSectorsLimit int
 }
@@ -183,6 +184,7 @@ func New(
 		conf.BidParams.DealDataFetchAttempts,
 		conf.BidParams.DiscardOrphanDealsAfter,
 		conf.BytesLimiter,
+		conf.ConcurrentImports,
 		conf.EstDownloadSpeed,
 	)
 	if err != nil {

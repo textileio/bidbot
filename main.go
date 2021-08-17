@@ -142,6 +142,12 @@ Also take the file system overhead into consideration when calculating the limit
 No limit by default.`,
 		},
 		{
+			Name:        "concurrent-imports-limit",
+			DefValue:    0,
+			Description: `If bigger than zero, only run that many imports concurrently. Zero means no limits.`,
+		},
+
+		{
 			Name:     "sealing-sectors-limit",
 			DefValue: 0,
 			Description: `If bigger than zero, stop bidding if the number of Lotus sealing sectors exceeds this limit.
@@ -352,6 +358,7 @@ var daemonCmd = &cobra.Command{
 				},
 			},
 			BytesLimiter:        bytesLimiter,
+			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
 			EstDownloadSpeed:    estDownloadSpeed,
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 		}
