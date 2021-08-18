@@ -46,9 +46,6 @@ var (
 	// DataURIFetchStartDelay is the time delay before the store will process queued data uri fetches on start.
 	DataURIFetchStartDelay = time.Second * 10
 
-	// DefaultDataURIFetchTimeout is the timeout used when fetching data uris of unknown size.
-	DefaultDataURIFetchTimeout = time.Hour * 10
-
 	// MaxDataURIFetchConcurrency is the maximum number of data uri fetches that will be handled concurrently.
 	MaxDataURIFetchConcurrency = 3
 
@@ -158,7 +155,7 @@ type Store struct {
 
 	dealDataDirectory     string
 	dealDataFetchAttempts uint32
-	estDownloadSpeed      uint64
+	dealDataFetchTimeout  time.Duration
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -175,10 +172,10 @@ func NewStore(
 	lc lotusclient.LotusClient,
 	dealDataDirectory string,
 	dealDataFetchAttempts uint32,
+	dealDataFetchTimeout time.Duration,
 	discardOrphanDealsAfter time.Duration,
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
-	estDownloadSpeed uint64,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
@@ -191,7 +188,7 @@ func NewStore(
 		tickCh:                make(chan struct{}, MaxDataURIFetchConcurrency),
 		dealDataDirectory:     dealDataDirectory,
 		dealDataFetchAttempts: dealDataFetchAttempts,
-		estDownloadSpeed:      estDownloadSpeed,
+		dealDataFetchTimeout:  dealDataFetchTimeout,
 		ctx:                   ctx,
 		cancel:                cancel,
 	}
@@ -500,13 +497,8 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size u
 	if _, err := f.Seek(0, 0); err != nil {
 		return "", fmt.Errorf("seeking file to the beginning: %v", err)
 	}
-	fetchTimeout := DefaultDataURIFetchTimeout
-	if size != 0 {
-		// add baseline timeout for very small files
-		fetchTimeout = time.Minute + time.Duration(size/s.estDownloadSpeed)*time.Second
-	}
-	log.Debugf("fetching %s with timeout of %v", uri, fetchTimeout)
-	ctx, cancel := context.WithTimeout(s.ctx, fetchTimeout)
+	log.Debugf("fetching %s with timeout of %v", uri, s.dealDataFetchTimeout)
+	ctx, cancel := context.WithTimeout(s.ctx, s.dealDataFetchTimeout)
 	defer cancel()
 	if err := duri.Write(ctx, f); err != nil {
 		return "", fmt.Errorf("writing data uri %s: %w", uri, err)
