@@ -126,12 +126,6 @@ func init() {
 			Description: "The timeout before discarding deal with no progress",
 		},
 		{
-			Name:     "est-download-speed",
-			DefValue: "1MB",
-			Description: `The estimated download speed per second, to govern the timeouts downloading CAR files.
-Be conservative to leave enough room for network instability.`,
-		},
-		{
 			Name:     "running-bytes-limit",
 			DefValue: "",
 			Description: `Maximum running total bytes in the deals to bid for a period of time.
@@ -158,6 +152,12 @@ Zero means no limits`,
 			DefValue:    3,
 			Description: "Number of times fetching deal data will be attempted before failing",
 		},
+		{
+			Name:        "deal-data-fetch-timeout",
+			DefValue:    "3h",
+			Description: `The timeout to fetch deal data. Be conservative to leave enough room for network instability.`,
+		},
+
 		{Name: "lotus-miner-api-maddr", DefValue: "/ip4/127.0.0.1/tcp/2345/http",
 			Description: "Lotus miner API multiaddress"},
 		{Name: "lotus-miner-api-token", DefValue: "",
@@ -324,9 +324,6 @@ var daemonCmd = &cobra.Command{
 			dealDataDirectory = filepath.Join(defaultConfigPath, "deal_data")
 		}
 
-		estDownloadSpeed, err := humanize.ParseBytes(v.GetString("est-download-speed"))
-		common.CheckErrf("parsing est-download-speed: %v", err)
-
 		var bytesLimiter limiter.Limiter = limiter.NopeLimiter{}
 		if limit := v.GetString("running-bytes-limit"); limit != "" {
 			lim, err := parseRunningBytesLimit(limit)
@@ -345,6 +342,7 @@ var daemonCmd = &cobra.Command{
 				DealStartWindow:         v.GetUint64("deal-start-window"),
 				DealDataDirectory:       dealDataDirectory,
 				DealDataFetchAttempts:   v.GetUint32("deal-data-fetch-attempts"),
+				DealDataFetchTimeout:    v.GetDuration("deal-data-fetch-timeout"),
 				DiscardOrphanDealsAfter: v.GetDuration("discard-orphan-deals-after"),
 			},
 			AuctionFilters: service.AuctionFilters{
@@ -359,7 +357,6 @@ var daemonCmd = &cobra.Command{
 			},
 			BytesLimiter:        bytesLimiter,
 			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
-			EstDownloadSpeed:    estDownloadSpeed,
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 		}
 		serv, err := service.New(config, store, lc, fc)

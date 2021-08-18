@@ -47,7 +47,6 @@ type Config struct {
 	AuctionFilters      AuctionFilters
 	BytesLimiter        limiter.Limiter
 	ConcurrentImports   int
-	EstDownloadSpeed    uint64
 	SealingSectorsLimit int
 }
 
@@ -71,6 +70,8 @@ type BidParams struct {
 	DealDataDirectory string
 	// DealDataFetchAttempts is the number of times fetching deal data cid will be attempted.
 	DealDataFetchAttempts uint32
+	// DealDataFetchTimeout is the timeout fetching deal data cid.
+	DealDataFetchTimeout time.Duration
 	// DiscardOrphanDealsAfter is the time after which deals with no progress will be removed.
 	DiscardOrphanDealsAfter time.Duration
 }
@@ -182,10 +183,10 @@ func New(
 		lc,
 		conf.BidParams.DealDataDirectory,
 		conf.BidParams.DealDataFetchAttempts,
+		conf.BidParams.DealDataFetchTimeout,
 		conf.BidParams.DiscardOrphanDealsAfter,
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
-		conf.EstDownloadSpeed,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)
