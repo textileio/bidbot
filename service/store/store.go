@@ -551,7 +551,7 @@ func (s *Store) fetchWorker(num int) {
 		b.ErrorCause = err.Error()
 		if b.DataURIFetchAttempts >= s.dealDataFetchAttempts {
 			status = BidStatusErrored
-			s.bytesLimiter.Withdraw(b.DealSize)
+			s.bytesLimiter.Withdraw(string(b.AuctionID))
 			log.Warnf("job %s exhausted all %d attempts with error: %v", b.ID, s.dealDataFetchAttempts, err)
 		} else {
 			status = BidStatusQueuedData
@@ -603,7 +603,7 @@ func (s *Store) fetchWorker(num int) {
 					logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
 				} else {
 					status = BidStatusFinalized
-					s.bytesLimiter.Commit(b.DealSize)
+					s.bytesLimiter.Commit(string(b.AuctionID))
 					// Reset error
 					b.ErrorCause = ""
 					logMsg = fmt.Sprintf("status=%s", status)

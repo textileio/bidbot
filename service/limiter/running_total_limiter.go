@@ -9,98 +9,119 @@ import (
 // Limiter is the interface for RunningTotalLimiter. It's there just so we can
 // have a NopeLimiter which does nothing.
 type Limiter interface {
-	Request(n uint64) bool
-	Commit(n uint64)
-	Withdraw(n uint64)
+	Request(id string, n uint64, period time.Duration) bool
+	Secure(id string)
+	Commit(id string)
+	Withdraw(id string)
 }
 
 // RunningTotalLimiter is a variant of sliding log rate limiter. It keeps all
 // requests with timestamps. What makes it different from a typical rate limiter is
-// that there are two phases - The caller first requests for 'n' tokens, does
-// some work, then either commits the tokens, or withdraws them so they can be
-// requested by others. So at anytime, the running total represents the tokens
-// committed in that period of time, plus those requested but not committed yet.
+// that there are three phases - The caller first requests for pre approval of
+// 'n' tokens for a period of time, then secures it before it expires, does
+// some work, and finally either commits the tokens, or withdraws them so they
+// can be requested by others. So at anytime, the running total represents the
+// tokens committed in that period of time, plus those requested but not
+// expired or committed yet.
 //
 // If we are going to have millions of requests, we should switch to a sliding
 // window implementation like https://github.com/RussellLuo/slidingwindow,
 // which saves space with the cost of some inaccuracy.
 type RunningTotalLimiter struct {
-	period time.Duration
-	limit  uint64
-	total  uint64
-	list   *list.List // list keeps committed tokens chronologically
-	mu     sync.Mutex
+	period    time.Duration
+	limit     uint64
+	total     uint64
+	requested map[string]requested
+	committed *list.List // committed keeps committed tokens chronologically
+	mu        sync.Mutex
+}
+
+type requested struct {
+	n uint64
+	t *time.Timer
 }
 
 type elem struct {
-	ts time.Time
+	id string
 	n  uint64
+	ts time.Time
 }
 
-// NewRunningTotalLimiter creates a Limiter which caps the running total in the 'period' to 'limit'.
-func NewRunningTotalLimiter(period time.Duration, limit uint64) Limiter {
-	return &RunningTotalLimiter{period: period, limit: limit, list: list.New()}
+// NewRunningTotalLimiter creates a Limiter which caps the running total in the
+// 'period' to 'limit'.
+func NewRunningTotalLimiter(limit uint64, period time.Duration) *RunningTotalLimiter {
+	return &RunningTotalLimiter{period: period, limit: limit, requested: make(map[string]requested), committed: list.New()}
 }
 
-// Request reqeusts for 'n' tokens and returns if granted or not. If granted,
-// the tokens must be either withdrawed or committed some time later, or we'll
-// run out of tokens.
-func (rl *RunningTotalLimiter) Request(n uint64) bool {
+// Request reqeusts for n tokens and returns if granted or not. If granted, the
+// tokens must be secured before expiration.
+func (rl *RunningTotalLimiter) Request(id string, n uint64, expiration time.Duration) bool {
 	now := time.Now()
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	for e := rl.list.Front(); e != nil; {
+	for e := rl.committed.Front(); e != nil; {
 		item := e.Value.(elem)
 		if now.Sub(item.ts) <= rl.period {
 			break
 		}
-		if rl.total < item.n {
-			// if the caller commits some tokens more than once,
-			// this could happen. Add a guard here just to prevent
-			// the total from wraping around to a gigantic number.
-			rl.total = 0
-		} else {
-			rl.total -= item.n
-		}
+		rl.total -= item.n
 		toRemove := e
 		e = e.Next()
-		rl.list.Remove(toRemove)
+		rl.committed.Remove(toRemove)
 	}
 	if rl.total+n > rl.limit {
 		return false
 	}
 	rl.total += n
+	rl.requested[id] = requested{
+		n: n,
+		t: time.AfterFunc(expiration, func() { rl.Withdraw(id) }),
+	}
 	return true
 }
 
-// Commit makes the requested n tokens permanent for the configured period.
-// It's the caller's responsibility to always request the tokens before
-// committing them.
-func (rl *RunningTotalLimiter) Commit(n uint64) {
-	e := elem{time.Now(), n}
+// Secure secures previously requested tokens associated with the id so they
+// don't expire automatically.
+func (rl *RunningTotalLimiter) Secure(id string) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	rl.list.PushBack(e)
+	if pa, exists := rl.requested[id]; exists {
+		_ = pa.t.Stop()
+	}
 }
 
-// Withdraw withdraws 'n' grant previously requested.
-func (rl *RunningTotalLimiter) Withdraw(n uint64) {
+// Commit makes the not-yet-expired or secured tokens associated with the id
+// permanent for the configured period.
+func (rl *RunningTotalLimiter) Commit(id string) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	if rl.total < n {
-		panic("total would become negative. are you attempting to withdraw more than once?")
+	if pa, exists := rl.requested[id]; exists {
+		rl.committed.PushBack(elem{id: id, n: pa.n, ts: time.Now()})
+		delete(rl.requested, id)
 	}
-	rl.total -= n
+}
+
+// Withdraw withdraws the tokens associated with the id.
+func (rl *RunningTotalLimiter) Withdraw(id string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	if pa, exists := rl.requested[id]; exists {
+		delete(rl.requested, id)
+		rl.total -= pa.n
+	}
 }
 
 // NopeLimiter does no limit.
 type NopeLimiter struct{}
 
 // Request always return true.
-func (l NopeLimiter) Request(n uint64) bool { return true }
+func (l NopeLimiter) Request(string, uint64, time.Duration) bool { return true }
+
+// Secure does nothing.
+func (l NopeLimiter) Secure(string) {}
 
 // Commit does nothing.
-func (l NopeLimiter) Commit(n uint64) {}
+func (l NopeLimiter) Commit(string) {}
 
 // Withdraw does nothing.
-func (l NopeLimiter) Withdraw(n uint64) {}
+func (l NopeLimiter) Withdraw(string) {}

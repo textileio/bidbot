@@ -40,7 +40,7 @@ require (
 	github.com/textileio/go-datastore-extensions v1.0.1
 	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
 	github.com/textileio/go-ds-mongo v0.1.4
-	github.com/textileio/go-libp2p-pubsub-rpc v0.0.4
+	github.com/textileio/go-libp2p-pubsub-rpc v0.0.5
 	github.com/textileio/go-log/v2 v2.1.3-gke-1
 	github.com/urfave/cli/v2 v2.3.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.21.0
@@ -48,7 +48,7 @@ require (
 	go.opentelemetry.io/otel/metric v0.21.0
 	go.opentelemetry.io/otel/sdk/export/metric v0.21.0
 	go.opentelemetry.io/otel/sdk/metric v0.21.0
-	go.uber.org/zap v1.18.1
+	go.uber.org/zap v1.19.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
