@@ -590,5 +590,5 @@ func parseRunningBytesLimit(s string) (limiter.Limiter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return limiter.NewRunningTotalLimiter(d, nBytes), nil
+	return limiter.NewRunningTotalLimiter(nBytes, d), nil
 }

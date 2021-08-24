@@ -1,21 +1,35 @@
 package service_test
 
 import (
+	"context"
 	"crypto/rand"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/ipfs/go-cid"
+	util "github.com/ipfs/go-ipfs-util"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	pb "github.com/textileio/bidbot/gen/v1"
 	core "github.com/textileio/bidbot/lib/auction"
+	"github.com/textileio/bidbot/lib/cast"
+	"github.com/textileio/bidbot/lib/datauri/apitest"
 	"github.com/textileio/bidbot/lib/dshelper"
+	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/logging"
 	filclientmocks "github.com/textileio/bidbot/mocks/lib/filclient"
 	lotusclientmocks "github.com/textileio/bidbot/mocks/service/lotusclient"
 	"github.com/textileio/bidbot/service"
-	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
+	"github.com/textileio/bidbot/service/limiter"
+	rpc "github.com/textileio/go-libp2p-pubsub-rpc"
+	rpcpeer "github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -33,95 +47,53 @@ func init() {
 }
 
 func TestNew(t *testing.T) {
-	dir := t.TempDir()
-
-	priv, _, err := crypto.GenerateEd25519Key(rand.Reader)
-	require.NoError(t, err)
-
-	bidParams := service.BidParams{
-		WalletAddrSig:         []byte("bar"),
-		AskPrice:              100000000000,
-		VerifiedAskPrice:      100000000000,
-		FastRetrieval:         true,
-		DealStartWindow:       oneDayEpochs,
-		DealDataFetchAttempts: 3,
-		DealDataDirectory:     t.TempDir(),
-	}
-	auctionFilters := service.AuctionFilters{
-		DealDuration: service.MinMaxFilter{
-			Min: core.MinDealDuration,
-			Max: core.MaxDealDuration,
-		},
-		DealSize: service.MinMaxFilter{
-			Min: 56 * 1024,
-			Max: 32 * 1000 * 1000 * 1000,
-		},
-	}
-
-	config := service.Config{
-		Peer: peer.Config{
-			PrivKey:    priv,
-			RepoPath:   dir,
-			EnableMDNS: true,
-		},
-	}
-
-	store, err := dshelper.NewBadgerTxnDatastore(filepath.Join(dir, "bidstore"))
-	require.NoError(t, err)
-	defer func() { _ = store.Close() }()
-
-	lc := newLotusClientMock()
-	fc := newFilClientMock()
-
-	config.AuctionFilters = auctionFilters
-
 	// Bad DealStartWindow
-	config.BidParams = service.BidParams{
-		DealStartWindow:       0,
-		DealDataFetchAttempts: 1,
-		DealDataDirectory:     t.TempDir(),
-	}
-	_, err = service.New(config, store, lc, fc)
+	_, err := newService(t, func(config *service.Config) {
+		config.BidParams = service.BidParams{
+			DealStartWindow:       0,
+			DealDataFetchAttempts: 1,
+			DealDataDirectory:     t.TempDir(),
+		}
+	})
 	require.Error(t, err)
 
 	// Bad DealDataFetchAttempts
-	config.BidParams = service.BidParams{
-		DealStartWindow:       oneDayEpochs,
-		DealDataFetchAttempts: 0,
-		DealDataDirectory:     t.TempDir(),
-	}
-	_, err = service.New(config, store, lc, fc)
+	_, err = newService(t, func(config *service.Config) {
+		config.BidParams = service.BidParams{
+			DealStartWindow:       oneDayEpochs,
+			DealDataFetchAttempts: 0,
+			DealDataDirectory:     t.TempDir(),
+		}
+	})
 	require.Error(t, err)
 
 	// Bad DealDataDirectory
-	config.BidParams = service.BidParams{
-		DealStartWindow:       oneDayEpochs,
-		DealDataFetchAttempts: 1,
-		DealDataDirectory:     "",
-	}
-	_, err = service.New(config, store, lc, fc)
+	_, err = newService(t, func(config *service.Config) {
+		config.BidParams = service.BidParams{
+			DealStartWindow:       oneDayEpochs,
+			DealDataFetchAttempts: 1,
+			DealDataDirectory:     "",
+		}
+	})
 	require.Error(t, err)
-
-	config.BidParams = bidParams
 
 	// Bad auction MinMaxFilter
-	config.AuctionFilters = service.AuctionFilters{
-		DealDuration: service.MinMaxFilter{
-			Min: 10, // min greater than max
-			Max: 0,
-		},
-		DealSize: service.MinMaxFilter{
-			Min: 10,
-			Max: 20,
-		},
-	}
-	_, err = service.New(config, store, lc, fc)
+	_, err = newService(t, func(config *service.Config) {
+		config.AuctionFilters = service.AuctionFilters{
+			DealDuration: service.MinMaxFilter{
+				Min: 10, // min greater than max
+				Max: 0,
+			},
+			DealSize: service.MinMaxFilter{
+				Min: 10,
+				Max: 20,
+			},
+		}
+	})
 	require.Error(t, err)
 
-	config.AuctionFilters = auctionFilters
-
 	// Good config
-	s, err := service.New(config, store, lc, fc)
+	s, err := newService(t, nil)
 	require.NoError(t, err)
 	err = s.Subscribe(false)
 	require.NoError(t, err)
@@ -135,8 +107,171 @@ func TestNew(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(false, nil)
+	config, store := validConfig(t)
+	lc := newLotusClientMock()
 	_, err = service.New(config, store, lc, fc2)
 	require.Error(t, err)
+}
+
+func TestBytesLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	service.BidsExpiration = 2 * time.Second
+	peerConfig, _ := newPeerConfig(t)
+	mockAuctioneer, err := rpcpeer.New(peerConfig)
+	require.NoError(t, err)
+	gw := apitest.NewDataURIHTTPGateway(mockAuctioneer.DAGService())
+	t.Cleanup(gw.Close)
+	payloadCid, sources, err := gw.CreateHTTPSources(true)
+	require.NoError(t, err)
+
+	limitPeriod := 5 * time.Second
+	limitBytes := uint64(80000)
+	s, err := newService(t, func(config *service.Config) {
+		config.BytesLimiter = limiter.NewRunningTotalLimiter(limitBytes, limitPeriod)
+	})
+	require.NoError(t, err)
+	require.NoError(t, s.Subscribe(true))
+
+	auctions, err := mockAuctioneer.NewTopic(context.Background(), core.Topic, false)
+	require.NoError(t, err)
+	var createTopicOnce sync.Once
+	var wins *rpc.Topic
+	var proposals *rpc.Topic
+	chNewBids := make(chan bool)
+	runAuction := func(t *testing.T, auctionID string, expectBid bool, sendProposal bool) {
+		auction := &pb.Auction{
+			Id:               auctionID,
+			PayloadCid:       payloadCid.String(),
+			DealSize:         limitBytes * 4 / 5,
+			DealDuration:     core.MinDealDuration,
+			FilEpochDeadline: 3000,
+			Sources:          cast.SourcesToPb(sources),
+			EndsAt:           timestamppb.New(time.Now().Add(time.Minute)),
+		}
+
+		msg, err := proto.Marshal(auction)
+		require.NoError(t, err)
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+		defer cancel()
+		topic, err := mockAuctioneer.NewTopic(ctx, core.BidsTopic(core.ID(auctionID)), true)
+		require.NoError(t, err)
+		topic.SetMessageHandler(func(from peer.ID, _ string, msg []byte) ([]byte, error) {
+			pbid := &pb.Bid{}
+			require.NoError(t, proto.Unmarshal(msg, pbid))
+			bidID := "bid-" + pbid.AuctionId
+			if sendProposal {
+				// send wins and proposals so bidbot can download the full file, then release the quota.
+				go func() {
+					// avoid conflict between saving bid and writing wins
+					time.Sleep(time.Second)
+					ctx := context.Background()
+					createTopicOnce.Do(func() {
+						wins, _ = mockAuctioneer.NewTopic(ctx, core.WinsTopic(from), false)
+						proposals, _ = mockAuctioneer.NewTopic(ctx, core.ProposalsTopic(from), false)
+					})
+					msg, err := proto.Marshal(&pb.WinningBid{
+						AuctionId: pbid.AuctionId,
+						BidId:     bidID,
+					})
+					require.NoError(t, err)
+					resp, err := wins.Publish(ctx, msg)
+					require.NoError(t, err)
+					if err := (<-resp).Err; err != nil {
+						t.Logf("bidbot response for wins: %v", err)
+					}
+					msg, err = proto.Marshal(&pb.WinningBidProposal{
+						AuctionId:   pbid.AuctionId,
+						BidId:       bidID,
+						ProposalCid: cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))).String(),
+					})
+					require.NoError(t, err)
+					_, err = proposals.Publish(ctx, msg)
+					require.NoError(t, err)
+				}()
+			}
+			chNewBids <- true
+			return []byte(bidID), nil
+		})
+		_, err = auctions.Publish(ctx, msg, rpc.WithRepublishing(true), rpc.WithIgnoreResponse(true))
+		require.NoError(t, err)
+		select {
+		case <-chNewBids:
+			if !expectBid {
+				t.Errorf("should have not bid in auction %s", auctionID)
+			}
+		case <-time.After(time.Second):
+			if expectBid {
+				t.Errorf("should have bid in auction %s", auctionID)
+			}
+		}
+	}
+	t.Run("limit is not hit", func(t *testing.T) { runAuction(t, "auction-1", true, false) })
+	t.Run("limit is hit", func(t *testing.T) { runAuction(t, "auction-2", false, false) })
+	time.Sleep(service.BidsExpiration)
+	t.Run("limit is reset (requested quota for auction-1 is expired), now sends proposal to finish download",
+		func(t *testing.T) { runAuction(t, "auction-3", true, true) })
+	time.Sleep(service.BidsExpiration)
+	t.Run("limit is still hit", func(t *testing.T) { runAuction(t, "auction-4", false, true) })
+	time.Sleep(limitPeriod)
+	t.Run("limit is cleared after the period", func(t *testing.T) { runAuction(t, "auction-5", true, true) })
+}
+
+func validConfig(t *testing.T) (service.Config, txndswrap.TxnDatastore) {
+	auctionFilters := service.AuctionFilters{
+		DealDuration: service.MinMaxFilter{
+			Min: core.MinDealDuration,
+			Max: core.MaxDealDuration,
+		},
+		DealSize: service.MinMaxFilter{
+			Min: 56 * 1024,
+			Max: 32 * 1000 * 1000 * 1000,
+		},
+	}
+
+	bidParams := service.BidParams{
+		WalletAddrSig:         []byte("bar"),
+		AskPrice:              100000000000,
+		VerifiedAskPrice:      100000000000,
+		FastRetrieval:         true,
+		DealStartWindow:       oneDayEpochs,
+		DealDataFetchAttempts: 3,
+		DealDataFetchTimeout:  time.Second,
+		DealDataDirectory:     t.TempDir(),
+	}
+	peerConfig, dir := newPeerConfig(t)
+	config := service.Config{
+		AuctionFilters: auctionFilters,
+		BidParams:      bidParams,
+		Peer:           peerConfig,
+	}
+
+	store, err := dshelper.NewBadgerTxnDatastore(filepath.Join(dir, "bidstore"))
+	require.NoError(t, err)
+	return config, store
+}
+
+func newPeerConfig(t *testing.T) (rpcpeer.Config, string) {
+	dir := t.TempDir()
+	priv, _, err := crypto.GenerateEd25519Key(rand.Reader)
+	require.NoError(t, err)
+	return rpcpeer.Config{
+		PrivKey:    priv,
+		RepoPath:   dir,
+		EnableMDNS: true,
+	}, dir
+}
+
+func newService(t *testing.T, overrideConfig func(*service.Config)) (*service.Service, error) {
+	config, store := validConfig(t)
+	if overrideConfig != nil {
+		overrideConfig(&config)
+	}
+
+	lc := newLotusClientMock()
+	fc := newFilClientMock()
+	return service.New(config, store, lc, fc)
 }
 
 func newLotusClientMock() *lotusclientmocks.LotusClient {

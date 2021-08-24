@@ -36,6 +36,11 @@ var (
 	// bidsAckTimeout is the max duration bidbot will wait for an ack after bidding in an auction.
 	bidsAckTimeout = time.Second * 30
 
+	// BidsExpiration is the duration to wait for a proposal CID after
+	// which bidbot will consider itself not winning in an auction, so the
+	// resources can be freed up.
+	BidsExpiration = 10 * time.Minute
+
 	// dataURIValidateTimeout is the timeout used when validating a data uri.
 	dataURIValidateTimeout = time.Minute
 )
@@ -331,49 +336,16 @@ func (s *Service) auctionsHandler(from core.ID, topic string, msg []byte) ([]byt
 	return nil, nil
 }
 
-func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
-	log.Debugf("%s received win from %s", topic, from)
-
-	win := &pb.WinningBid{}
-	if err := proto.Unmarshal(msg, win); err != nil {
-		return nil, fmt.Errorf("unmarshaling message: %v", err)
-	}
-
-	if err := s.store.SetAwaitingProposalCid(auction.BidID(win.BidId)); err != nil {
-		return nil, fmt.Errorf("setting awaiting proposal cid: %v", err)
-	}
-
-	log.Infof("bid %s won in auction %s; awaiting proposal cid", win.BidId, win.AuctionId)
-	return nil, nil
-}
-
-func (s *Service) proposalHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
-	log.Debugf("%s received proposal from %s", topic, from)
-
-	prop := &pb.WinningBidProposal{}
-	if err := proto.Unmarshal(msg, prop); err != nil {
-		return nil, fmt.Errorf("unmarshaling message: %v", err)
-	}
-
-	pcid, err := cid.Decode(prop.ProposalCid)
-	if err != nil {
-		return nil, fmt.Errorf("decoding proposal cid: %v", err)
-	}
-	if err := s.store.SetProposalCid(auction.BidID(prop.BidId), pcid); err != nil {
-		return nil, fmt.Errorf("setting proposal cid: %v", err)
-	}
-
-	log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
-	return nil, nil
-}
-
 func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	if rejectReason := s.filterAuction(a); rejectReason != "" {
 		log.Infof("not bidding in auction %s from %s: %s", a.Id, from, rejectReason)
 		return nil
 	}
 
-	if !s.bytesLimiter.Request(a.DealSize) {
+	// request for some quota, which may be used or gets expired if lossing
+	// the auction.
+	granted := s.bytesLimiter.Request(a.Id, a.DealSize, BidsExpiration)
+	if !granted {
 		log.Infof("not bidding in auction %s from %s: would exceed the running total bytes limit", a.Id, from)
 		return nil
 	}
@@ -381,9 +353,8 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	if s.sealingSectorsLimit > 0 {
 		n, err := s.lc.CurrentSealingSectors()
 		if err != nil {
-			return fmt.Errorf("getting number of sealing sectors: %v", err)
-		}
-		if n > s.sealingSectorsLimit {
+			log.Errorf("fail to get number of sealing sectors, continuing: %v", err)
+		} else if n > s.sealingSectorsLimit {
 			log.Infof("not bidding: lotus already has %d sealing sectors", n)
 			return nil
 		}
@@ -510,6 +481,46 @@ func (s *Service) filterAuction(auction *pb.Auction) (rejectReason string) {
 	}
 
 	return ""
+}
+
+func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
+	log.Debugf("%s received win from %s", topic, from)
+
+	win := &pb.WinningBid{}
+	if err := proto.Unmarshal(msg, win); err != nil {
+		return nil, fmt.Errorf("unmarshaling message: %v", err)
+	}
+
+	if err := s.store.SetAwaitingProposalCid(auction.BidID(win.BidId)); err != nil {
+		return nil, fmt.Errorf("setting awaiting proposal cid: %v", err)
+	}
+
+	log.Infof("bid %s won in auction %s; awaiting proposal cid", win.BidId, win.AuctionId)
+	return nil, nil
+}
+
+func (s *Service) proposalHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
+	log.Debugf("%s received proposal from %s", topic, from)
+
+	prop := &pb.WinningBidProposal{}
+	if err := proto.Unmarshal(msg, prop); err != nil {
+		log.Errorf("unmarshaling message: %v", err)
+		return nil, fmt.Errorf("unmarshaling message: %v", err)
+	}
+
+	pcid, err := cid.Decode(prop.ProposalCid)
+	if err != nil {
+		log.Errorf("decoding proposal cid: %v", err)
+		return nil, fmt.Errorf("decoding proposal cid: %v", err)
+	}
+	if err := s.store.SetProposalCid(auction.BidID(prop.BidId), pcid); err != nil {
+		log.Errorf("setting proposal cid: %v", err)
+		return nil, fmt.Errorf("setting proposal cid: %v", err)
+	}
+	// ready to fetch data, so the requested quota is actually in use.
+	s.bytesLimiter.Secure(prop.AuctionId)
+	log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
+	return nil, nil
 }
 
 func (s *Service) printStats() func() {
