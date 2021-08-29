@@ -283,6 +283,7 @@ var daemonCmd = &cobra.Command{
 		common.CheckErrf("setting log levels: %v", err)
 	},
 	Run: func(c *cobra.Command, args []string) {
+		log.Infof("bidbot %s", buildinfo.Summary())
 		storageProviderID := v.GetString("storage-provider-id")
 		if storageProviderID == "" {
 			storageProviderID = v.GetString("miner-addr") // fallback to support existing config
