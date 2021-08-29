@@ -407,7 +407,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	bid := &pb.Bid{
 		AuctionId:         a.Id,
 		StorageProviderId: s.bidParams.StorageProviderID,
-		WalletAddrSig:     s.bidParams.WalletAddrSig,
+		WalletAddrSig:     []byte("***"),
 		AskPrice:          s.bidParams.AskPrice,
 		VerifiedAskPrice:  s.bidParams.VerifiedAskPrice,
 		StartEpoch:        startEpoch,
@@ -419,6 +419,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	}
 	log.Infof("bidding in auction %s from %s: \n%s", a.Id, from, string(bidj))
 
+	bid.WalletAddrSig = s.bidParams.WalletAddrSig
 	msg, err := proto.Marshal(bid)
 	if err != nil {
 		return fmt.Errorf("marshaling message: %v", err)
