@@ -20,6 +20,11 @@ const (
 	// HTTPCarHeaderOnly is a HTTP header indicating that the bidbot wants
 	// only the CAR file header, as a hint to the HTTP server.
 	HTTPCarHeaderOnly = "X-Bidbot-Car-Header-Only"
+
+	// ErrStringWouldExceedRunningBytesLimit is the error message bidbot responds to wins
+	// message if proceeding with the bid would exceed the running bytes
+	// limit.
+	ErrStringWouldExceedRunningBytesLimit = "would exceed running bytes limit"
 )
 
 // BidID is a unique identifier for a Bid.
