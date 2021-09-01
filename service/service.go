@@ -342,14 +342,6 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		return nil
 	}
 
-	// request for some quota, which may be used or gets expired if lossing
-	// the auction.
-	granted := s.bytesLimiter.Request(a.Id, a.DealSize, BidsExpiration)
-	if !granted {
-		log.Infof("not bidding in auction %s from %s: would exceed the running total bytes limit", a.Id, from)
-		return nil
-	}
-
 	if s.sealingSectorsLimit > 0 {
 		n, err := s.lc.CurrentSealingSectors()
 		if err != nil {
@@ -490,6 +482,18 @@ func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, e
 	win := &pb.WinningBid{}
 	if err := proto.Unmarshal(msg, win); err != nil {
 		return nil, fmt.Errorf("unmarshaling message: %v", err)
+	}
+
+	bid, err := s.store.GetBid(auction.BidID(win.BidId))
+	if err != nil {
+		log.Errorf("error getting bid, assuming bytes limit is not hit: %v", err)
+	} else {
+		// request for some quota, which may be used or gets expired if lossing
+		// the auction.
+		granted := s.bytesLimiter.Request(win.AuctionId, bid.DealSize, BidsExpiration)
+		if !granted {
+			return nil, errors.New("actively reject to avoid hitting running bytes limit")
+		}
 	}
 
 	if err := s.store.SetAwaitingProposalCid(auction.BidID(win.BidId)); err != nil {
