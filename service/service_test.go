@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -139,8 +140,8 @@ func TestBytesLimit(t *testing.T) {
 	var createTopicOnce sync.Once
 	var wins *rpc.Topic
 	var proposals *rpc.Topic
-	chNewBids := make(chan bool)
-	runAuction := func(t *testing.T, auctionID string, expectBid bool, sendProposal bool) {
+	chWinsResponse := make(chan error)
+	runAuction := func(t *testing.T, auctionID string, expectGoodResponse bool, sendProposal bool) {
 		auction := &pb.Auction{
 			Id:               auctionID,
 			PayloadCid:       payloadCid.String(),
@@ -161,26 +162,24 @@ func TestBytesLimit(t *testing.T) {
 			pbid := &pb.Bid{}
 			require.NoError(t, proto.Unmarshal(msg, pbid))
 			bidID := "bid-" + pbid.AuctionId
-			if sendProposal {
-				// send wins and proposals so bidbot can download the full file, then release the quota.
-				go func() {
-					// avoid conflict between saving bid and writing wins
-					time.Sleep(time.Second)
-					ctx := context.Background()
-					createTopicOnce.Do(func() {
-						wins, _ = mockAuctioneer.NewTopic(ctx, core.WinsTopic(from), false)
-						proposals, _ = mockAuctioneer.NewTopic(ctx, core.ProposalsTopic(from), false)
-					})
-					msg, err := proto.Marshal(&pb.WinningBid{
-						AuctionId: pbid.AuctionId,
-						BidId:     bidID,
-					})
-					require.NoError(t, err)
-					resp, err := wins.Publish(ctx, msg)
-					require.NoError(t, err)
-					if err := (<-resp).Err; err != nil {
-						t.Logf("bidbot response for wins: %v", err)
-					}
+			go func() {
+				// avoid conflict between saving bid and writing wins
+				time.Sleep(100 * time.Millisecond)
+				ctx := context.Background()
+				createTopicOnce.Do(func() {
+					wins, _ = mockAuctioneer.NewTopic(ctx, core.WinsTopic(from), false)
+					proposals, _ = mockAuctioneer.NewTopic(ctx, core.ProposalsTopic(from), false)
+				})
+				msg, err := proto.Marshal(&pb.WinningBid{
+					AuctionId: pbid.AuctionId,
+					BidId:     bidID,
+				})
+				require.NoError(t, err)
+				resp, err := wins.Publish(ctx, msg)
+				require.NoError(t, err)
+				chWinsResponse <- (<-resp).Err
+				if sendProposal {
+					// send  proposals so bidbot can download the full file, then release the quota.
 					msg, err = proto.Marshal(&pb.WinningBidProposal{
 						AuctionId:   pbid.AuctionId,
 						BidId:       bidID,
@@ -189,22 +188,19 @@ func TestBytesLimit(t *testing.T) {
 					require.NoError(t, err)
 					_, err = proposals.Publish(ctx, msg)
 					require.NoError(t, err)
-				}()
-			}
-			chNewBids <- true
+				}
+			}()
 			return []byte(bidID), nil
 		})
 		_, err = auctions.Publish(ctx, msg, rpc.WithRepublishing(true), rpc.WithIgnoreResponse(true))
 		require.NoError(t, err)
-		select {
-		case <-chNewBids:
-			if !expectBid {
-				t.Errorf("should have not bid in auction %s", auctionID)
-			}
-		case <-time.After(time.Second):
-			if expectBid {
-				t.Errorf("should have bid in auction %s", auctionID)
-			}
+		winsResponseError := <-chWinsResponse
+		if !expectGoodResponse {
+			require.Error(t, winsResponseError,
+				fmt.Sprintf("should have responded error for wins in auction %s", auctionID))
+		} else {
+			require.NoError(t, winsResponseError,
+				fmt.Sprintf("should have had not error for wins in auction %s", auctionID))
 		}
 	}
 	t.Run("limit is not hit", func(t *testing.T) { runAuction(t, "auction-1", true, false) })
