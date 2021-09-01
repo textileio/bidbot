@@ -198,6 +198,8 @@ func TestBytesLimit(t *testing.T) {
 		if !expectGoodResponse {
 			require.Error(t, winsResponseError,
 				fmt.Sprintf("should have responded error for wins in auction %s", auctionID))
+			require.Equal(t, core.ErrStringWouldExceedRunningBytesLimit, winsResponseError.Error(),
+				fmt.Sprintf("should have responded expected error message in auction %s", auctionID))
 		} else {
 			require.NoError(t, winsResponseError,
 				fmt.Sprintf("should have had not error for wins in auction %s", auctionID))

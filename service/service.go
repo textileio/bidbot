@@ -43,6 +43,8 @@ var (
 
 	// dataURIValidateTimeout is the timeout used when validating a data uri.
 	dataURIValidateTimeout = time.Minute
+
+	errWouldExceedRunningBytesLimit = errors.New(auction.ErrStringWouldExceedRunningBytesLimit)
 )
 
 // Config defines params for Service configuration.
@@ -492,7 +494,7 @@ func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, e
 		// the auction.
 		granted := s.bytesLimiter.Request(win.AuctionId, bid.DealSize, BidsExpiration)
 		if !granted {
-			return nil, errors.New("actively reject to avoid hitting running bytes limit")
+			return nil, errWouldExceedRunningBytesLimit
 		}
 	}
 
