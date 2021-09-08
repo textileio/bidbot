@@ -4,16 +4,11 @@ go 1.16
 
 require (
 	github.com/dustin/go-humanize v1.0.0
-	github.com/filecoin-project/dagstore v0.4.3 // indirect
 	github.com/filecoin-project/go-address v0.0.5
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.1-0.20201006184820-924ee87a1349 // indirect
-	github.com/filecoin-project/go-data-transfer v1.7.8 // indirect
-	github.com/filecoin-project/go-fil-markets v1.8.1 // indirect
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.1-0.20210810190654-139e0e79e69e
-	github.com/filecoin-project/go-statemachine v1.0.1 // indirect
 	github.com/filecoin-project/lotus v1.11.2
-	github.com/filecoin-project/specs-actors/v5 v5.0.4 // indirect
 	github.com/gogo/status v1.1.0
 	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
 	github.com/google/uuid v1.2.0
@@ -27,13 +22,10 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.0.5
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/ipld/go-car v0.1.1-0.20201119040415-11b6074b6d4d
-	github.com/ipld/go-car/v2 v2.0.3-0.20210811121346-c514a30114d7 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joho/godotenv v1.3.0
-	github.com/lib/pq v1.7.0 // indirect
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
 	github.com/libp2p/go-libp2p-core v0.8.6
-	github.com/libp2p/go-libp2p-pubsub v0.5.4 // indirect
 	github.com/multiformats/go-multiaddr v0.3.3
 	github.com/multiformats/go-multiaddr-dns v0.3.1
 	github.com/multiformats/go-multibase v0.0.3
@@ -58,7 +50,6 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.21.0
 	go.opentelemetry.io/otel/sdk/metric v0.21.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/tools v0.1.5 // indirect
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
 )
