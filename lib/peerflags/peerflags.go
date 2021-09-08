@@ -11,12 +11,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	mbase "github.com/multiformats/go-multibase"
 	"github.com/spf13/viper"
-	"github.com/textileio/bidbot/lib/common"
+	"github.com/textileio/cli"
 	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 )
 
 // Flags defines daemon flags for github.com/textileio/go-libp2p-pubsub-rpc/peer.
-var Flags = []common.Flag{
+var Flags = []cli.Flag{
 	{
 		Name:        "fake-mode",
 		DefValue:    false,
@@ -117,9 +117,9 @@ func GetConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string, isAuctioneer
 	return peer.Config{
 		RepoPath:           repoPath,
 		PrivKey:            priv,
-		ListenMultiaddrs:   common.ParseStringSlice(v, "listen-multiaddr"),
-		AnnounceMultiaddrs: common.ParseStringSlice(v, "announce-multiaddr"),
-		BootstrapAddrs:     common.ParseStringSlice(v, "bootstrap-multiaddr"),
+		ListenMultiaddrs:   cli.ParseStringSlice(v, "listen-multiaddr"),
+		AnnounceMultiaddrs: cli.ParseStringSlice(v, "announce-multiaddr"),
+		BootstrapAddrs:     cli.ParseStringSlice(v, "bootstrap-multiaddr"),
 		ConnManager: connmgr.NewConnManager(
 			v.GetInt("conn-low"),
 			v.GetInt("conn-high"),
@@ -167,16 +167,16 @@ func WriteConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string) (string, e
 		v.Set("private-key", keystr)
 	}
 
-	v.Set("listen-multiaddr", common.ParseStringSlice(v, "listen-multiaddr"))
-	v.Set("bootstrap-multiaddr", common.ParseStringSlice(v, "bootstrap-multiaddr"))
-	v.Set("announce-multiaddr", common.ParseStringSlice(v, "announce-multiaddr"))
+	v.Set("listen-multiaddr", cli.ParseStringSlice(v, "listen-multiaddr"))
+	v.Set("bootstrap-multiaddr", cli.ParseStringSlice(v, "bootstrap-multiaddr"))
+	v.Set("announce-multiaddr", cli.ParseStringSlice(v, "announce-multiaddr"))
 
 	if err := v.WriteConfigAs(cf); err != nil {
 		return "", fmt.Errorf("error writing config: %v", err)
 	}
 	v.SetConfigFile(cf)
 	if err := v.ReadInConfig(); err != nil {
-		common.CheckErrf("reading configuration: %s", err)
+		cli.CheckErrf("reading configuration: %s", err)
 	}
 	return cf, nil
 }

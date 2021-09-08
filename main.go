@@ -37,6 +37,7 @@ import (
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	"github.com/textileio/bidbot/service/store"
+	"github.com/textileio/cli"
 	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
 	golog "github.com/textileio/go-log/v2"
 )
@@ -64,14 +65,14 @@ func init() {
 	dealsCmd.AddCommand(dealsListCmd)
 	dealsCmd.AddCommand(dealsShowCmd)
 
-	commonFlags := []common.Flag{
+	commonFlags := []cli.Flag{
 		{
 			Name:        "http-port",
 			DefValue:    "9999",
 			Description: "HTTP API listen address",
 		},
 	}
-	daemonFlags := []common.Flag{
+	daemonFlags := []cli.Flag{
 		{
 			Name:        "miner-addr",
 			DefValue:    "",
@@ -176,9 +177,9 @@ Zero means no limits`,
 		{Name: "log-json", DefValue: false, Description: "Enable structured logging"},
 	}
 	daemonFlags = append(daemonFlags, peerflags.Flags...)
-	dealsFlags := []common.Flag{{Name: "json", DefValue: false,
+	dealsFlags := []cli.Flag{{Name: "json", DefValue: false,
 		Description: "output in json format instead of tabular print"}}
-	dealsListFlags := []common.Flag{{Name: "status", DefValue: "",
+	dealsListFlags := []cli.Flag{{Name: "status", DefValue: "",
 		Description: "filter by auction statuses, separated by comma"}}
 
 	cobra.OnInitialize(func() {
@@ -189,11 +190,11 @@ Zero means no limits`,
 		_ = v.ReadInConfig()
 	})
 
-	common.ConfigureCLI(v, "BIDBOT", commonFlags, rootCmd.PersistentFlags())
-	common.ConfigureCLI(v, "BIDBOT", peerflags.Flags, initCmd.PersistentFlags())
-	common.ConfigureCLI(v, "BIDBOT", daemonFlags, daemonCmd.PersistentFlags())
-	common.ConfigureCLI(v, "BIDBOT", dealsFlags, dealsCmd.PersistentFlags())
-	common.ConfigureCLI(v, "BIDBOT", dealsListFlags, dealsListCmd.PersistentFlags())
+	cli.ConfigureCLI(v, "BIDBOT", commonFlags, rootCmd.PersistentFlags())
+	cli.ConfigureCLI(v, "BIDBOT", peerflags.Flags, initCmd.PersistentFlags())
+	cli.ConfigureCLI(v, "BIDBOT", daemonFlags, daemonCmd.PersistentFlags())
+	cli.ConfigureCLI(v, "BIDBOT", dealsFlags, dealsCmd.PersistentFlags())
+	cli.ConfigureCLI(v, "BIDBOT", dealsListFlags, dealsListCmd.PersistentFlags())
 }
 
 var rootCmd = &cobra.Command{
@@ -229,15 +230,15 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 	Args: cobra.ExactArgs(0),
 	Run: func(c *cobra.Command, args []string) {
 		path, err := peerflags.WriteConfig(v, "BIDBOT_PATH", defaultConfigPath)
-		common.CheckErrf("writing config: %v", err)
+		cli.CheckErrf("writing config: %v", err)
 		fmt.Printf("Initialized configuration file: %s\n\n", path)
 
 		_, key, err := mbase.Decode(v.GetString("private-key"))
-		common.CheckErrf("decoding private key: %v", err)
+		cli.CheckErrf("decoding private key: %v", err)
 		priv, err := crypto.UnmarshalPrivateKey(key)
-		common.CheckErrf("unmarshaling private key: %v", err)
+		cli.CheckErrf("unmarshaling private key: %v", err)
 		id, err := core.IDFromPrivateKey(priv)
-		common.CheckErrf("getting peer id: %v", err)
+		cli.CheckErrf("getting peer id: %v", err)
 
 		signingToken := hex.EncodeToString([]byte(id))
 
@@ -268,8 +269,8 @@ var daemonCmd = &cobra.Command{
 	Long:  "Run a network-connected bidding bot that listens for and bids on storage deal auctions.",
 	Args:  cobra.ExactArgs(0),
 	PersistentPreRun: func(c *cobra.Command, args []string) {
-		common.ExpandEnvVars(v, v.AllSettings())
-		err := common.ConfigureLogging(v, []string{
+		cli.ExpandEnvVars(v, v.AllSettings())
+		err := cli.ConfigureLogging(v, []string{
 			cliName,
 			"bidbot/service",
 			"bidbot/store",
@@ -280,7 +281,7 @@ var daemonCmd = &cobra.Command{
 			"psrpc/peer",
 			"psrpc/mdns",
 		})
-		common.CheckErrf("setting log levels: %v", err)
+		cli.CheckErrf("setting log levels: %v", err)
 	},
 	Run: func(c *cobra.Command, args []string) {
 		log.Infof("bidbot %s", buildinfo.Summary())
@@ -289,22 +290,22 @@ var daemonCmd = &cobra.Command{
 			storageProviderID = v.GetString("miner-addr") // fallback to support existing config
 		}
 		if storageProviderID == "" {
-			common.CheckErr(errors.New("--storage-provider-id is required. See 'bidbot help init' for instructions"))
+			cli.CheckErr(errors.New("--storage-provider-id is required. See 'bidbot help init' for instructions"))
 		}
 		if !validStorageProviderID.MatchString(storageProviderID) {
-			common.CheckErr(errors.New("--storage-provider-id should be in the form of f0xxxx"))
+			cli.CheckErr(errors.New("--storage-provider-id should be in the form of f0xxxx"))
 		}
 
 		if v.GetString("wallet-addr-sig") == "" {
-			common.CheckErr(errors.New("--wallet-addr-sig is required. See 'bidbot help init' for instructions"))
+			cli.CheckErr(errors.New("--wallet-addr-sig is required. See 'bidbot help init' for instructions"))
 		}
 
 		pconfig, err := peerflags.GetConfig(v, "BIDBOT_PATH", defaultConfigPath, false)
-		common.CheckErrf("getting peer config: %v", err)
+		cli.CheckErrf("getting peer config: %v", err)
 
-		settings, err := common.MarshalConfig(v, !v.GetBool("log-json"),
+		settings, err := cli.MarshalConfig(v, !v.GetBool("log-json"),
 			"private-key", "wallet-addr-sig", "lotus-miner-api-token")
-		common.CheckErrf("marshaling config: %v", err)
+		cli.CheckErrf("marshaling config: %v", err)
 		log.Infof("loaded config from %s: %s", v.ConfigFileUsed(), string(settings))
 
 		fin := finalizer.NewFinalizer()
@@ -313,14 +314,14 @@ var daemonCmd = &cobra.Command{
 			repoPath = defaultConfigPath
 		}
 		store, err := dshelper.NewBadgerTxnDatastore(filepath.Join(repoPath, "bidstore"))
-		common.CheckErrf("creating datastore: %v", err)
+		cli.CheckErrf("creating datastore: %v", err)
 		fin.Add(store)
 
 		err = common.SetupInstrumentation(v.GetString("metrics.addr"))
-		common.CheckErrf("booting instrumentation: %v", err)
+		cli.CheckErrf("booting instrumentation: %v", err)
 
 		walletAddrSig, err := hex.DecodeString(v.GetString("wallet-addr-sig"))
-		common.CheckErrf("decoding wallet address signature: %v", err)
+		cli.CheckErrf("decoding wallet address signature: %v", err)
 
 		lc, err := lotusclient.New(
 			v.GetString("lotus-miner-api-maddr"),
@@ -328,11 +329,11 @@ var daemonCmd = &cobra.Command{
 			v.GetInt("lotus-api-conn-retries"),
 			v.GetBool("fake-mode"),
 		)
-		common.CheckErrf("creating lotus client: %v", err)
+		cli.CheckErrf("creating lotus client: %v", err)
 		fin.Add(lc)
 
 		fc, err := filclient.New(v.GetString("lotus-gateway-url"), v.GetBool("fake-mode"))
-		common.CheckErrf("creating chain client: %v", err)
+		cli.CheckErrf("creating chain client: %v", err)
 		fin.Add(fc)
 
 		dealDataDirectory := os.Getenv("BIDBOT_DEAL_DATA_DIRECTORY")
@@ -343,7 +344,7 @@ var daemonCmd = &cobra.Command{
 		var bytesLimiter limiter.Limiter = limiter.NopeLimiter{}
 		if limit := v.GetString("running-bytes-limit"); limit != "" {
 			lim, err := parseRunningBytesLimit(limit)
-			common.CheckErrf(fmt.Sprintf("parsing '%s': %%w", limit), err)
+			cli.CheckErrf(fmt.Sprintf("parsing '%s': %%w", limit), err)
 			bytesLimiter = lim
 		}
 
@@ -376,18 +377,18 @@ var daemonCmd = &cobra.Command{
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 		}
 		serv, err := service.New(config, store, lc, fc)
-		common.CheckErrf("starting service: %v", err)
+		cli.CheckErrf("starting service: %v", err)
 		fin.Add(serv)
 
 		err = serv.Subscribe(true)
-		common.CheckErrf("subscribing to deal auction feed: %v", err)
+		cli.CheckErrf("subscribing to deal auction feed: %v", err)
 
 		api, err := httpapi.NewServer(":"+v.GetString("http-port"), serv)
-		common.CheckErrf("creating http API server: %v", err)
+		cli.CheckErrf("creating http API server: %v", err)
 		fin.Add(api)
 
-		common.HandleInterrupt(func() {
-			common.CheckErr(fin.Cleanupf("closing service: %v", nil))
+		cli.HandleInterrupt(func() {
+			cli.CheckErr(fin.Cleanupf("closing service: %v", nil))
 		})
 	},
 }
@@ -398,10 +399,10 @@ var idCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	Run: func(c *cobra.Command, args []string) {
 		res, err := http.Get(urlFor("id"))
-		common.CheckErr(err)
+		cli.CheckErr(err)
 		defer func() {
 			err := res.Body.Close()
-			common.CheckErr(err)
+			cli.CheckErr(err)
 		}()
 		b, _ := ioutil.ReadAll(res.Body)
 		if res.StatusCode != http.StatusOK {
@@ -468,7 +469,7 @@ var dealsListCmd = &cobra.Command{
 		bids := getBids(urlFor("deals") + query)
 		if v.GetBool("json") {
 			b, err := json.MarshalIndent(bids, "", "\t")
-			common.CheckErr(err)
+			cli.CheckErr(err)
 			fmt.Println(string(b))
 			return
 		}
@@ -477,18 +478,18 @@ var dealsListCmd = &cobra.Command{
 			if i == 0 {
 				for _, field := range dealsListFields {
 					_, err := fmt.Fprintf(w, "%s\t", field)
-					common.CheckErr(err)
+					cli.CheckErr(err)
 				}
 				_, err := fmt.Fprintln(w, "")
-				common.CheckErr(err)
+				cli.CheckErr(err)
 			}
 			value := reflect.ValueOf(bid)
 			for _, field := range dealsListFields {
 				_, err := fmt.Fprintf(w, "%v\t", value.FieldByName(field))
-				common.CheckErr(err)
+				cli.CheckErr(err)
 			}
 			_, err := fmt.Fprintln(w, "")
-			common.CheckErr(err)
+			cli.CheckErr(err)
 		}
 		_ = w.Flush()
 	},
@@ -507,7 +508,7 @@ var dealsShowCmd = &cobra.Command{
 		bid := bids[0]
 		if v.GetBool("json") {
 			b, err := json.MarshalIndent(bid, "", "\t")
-			common.CheckErr(err)
+			cli.CheckErr(err)
 			fmt.Println(string(b))
 			return
 		}
@@ -516,7 +517,7 @@ var dealsShowCmd = &cobra.Command{
 		value := reflect.ValueOf(bid)
 		for i := 0; i < typ.NumField(); i++ {
 			_, err := fmt.Fprintf(w, "%s:\t%v\n", typ.Field(i).Name, value.Field(i))
-			common.CheckErr(err)
+			cli.CheckErr(err)
 		}
 		_ = w.Flush()
 	},
@@ -536,19 +537,19 @@ Deal data is written to BIDBOT_DEAL_DATA_DIRECTORY in CAR format.
 		params.Add("cid", args[0])
 		params.Add("uri", args[1])
 		res, err := http.Get(base + params.Encode())
-		common.CheckErr(err)
+		cli.CheckErr(err)
 		defer func() {
 			err := res.Body.Close()
-			common.CheckErr(err)
+			cli.CheckErr(err)
 		}()
 		if _, err = io.Copy(os.Stdout, res.Body); err != io.EOF {
-			common.CheckErr(err)
+			cli.CheckErr(err)
 		}
 	},
 }
 
 func main() {
-	common.CheckErr(rootCmd.Execute())
+	cli.CheckErr(rootCmd.Execute())
 }
 
 func urlFor(parts ...string) string {
@@ -561,10 +562,10 @@ func urlFor(parts ...string) string {
 
 func getBids(u string) (bids []store.Bid) {
 	res, err := http.Get(u)
-	common.CheckErr(err)
+	cli.CheckErr(err)
 	defer func() {
 		err := res.Body.Close()
-		common.CheckErr(err)
+		cli.CheckErr(err)
 	}()
 	if res.StatusCode != http.StatusOK {
 		b, _ := ioutil.ReadAll(res.Body)
@@ -572,7 +573,7 @@ func getBids(u string) (bids []store.Bid) {
 	}
 	decoder := json.NewDecoder(res.Body)
 	err = decoder.Decode(&bids)
-	common.CheckErr(err)
+	cli.CheckErr(err)
 	return
 }
 

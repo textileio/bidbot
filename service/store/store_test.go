@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri/apitest"
-	"github.com/textileio/bidbot/lib/logging"
 	lotusclientmocks "github.com/textileio/bidbot/mocks/service/lotusclient"
 	"github.com/textileio/bidbot/service/limiter"
 	badger "github.com/textileio/go-ds-badger3"
@@ -29,7 +28,7 @@ import (
 )
 
 func init() {
-	if err := logging.SetLogLevels(map[string]golog.LogLevel{
+	if err := golog.SetLogLevels(map[string]golog.LogLevel{
 		"bidbot/store": golog.LevelDebug,
 	}); err != nil {
 		panic(err)
