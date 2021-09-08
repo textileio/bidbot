@@ -21,7 +21,6 @@ import (
 	"github.com/textileio/bidbot/lib/datauri/apitest"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
-	"github.com/textileio/bidbot/lib/logging"
 	filclientmocks "github.com/textileio/bidbot/mocks/lib/filclient"
 	lotusclientmocks "github.com/textileio/bidbot/mocks/service/lotusclient"
 	"github.com/textileio/bidbot/service"
@@ -38,7 +37,7 @@ const (
 )
 
 func init() {
-	if err := logging.SetLogLevels(map[string]golog.LogLevel{
+	if err := golog.SetLogLevels(map[string]golog.LogLevel{
 		"bidbot/service": golog.LevelDebug,
 		"bidbot/store":   golog.LevelDebug,
 		"psrpc/peer":     golog.LevelDebug,
