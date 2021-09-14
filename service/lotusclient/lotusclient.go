@@ -89,7 +89,9 @@ func (c *Client) HealthCheck() error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
-	_, err := c.c.ID(ctx)
+	start := time.Now()
+	_, err := c.c.MarketListIncompleteDeals(ctx)
+	log.Infof("MarketListIncompleteDeals call took %v", time.Since(start))
 	return err
 }
 
