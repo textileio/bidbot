@@ -23,6 +23,7 @@ import (
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
+	"github.com/textileio/bidbot/service/pricing"
 	bidstore "github.com/textileio/bidbot/service/store"
 	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
 	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
@@ -49,12 +50,14 @@ var (
 
 // Config defines params for Service configuration.
 type Config struct {
-	Peer                peer.Config
-	BidParams           BidParams
-	AuctionFilters      AuctionFilters
-	BytesLimiter        limiter.Limiter
-	ConcurrentImports   int
-	SealingSectorsLimit int
+	Peer                      peer.Config
+	BidParams                 BidParams
+	AuctionFilters            AuctionFilters
+	BytesLimiter              limiter.Limiter
+	ConcurrentImports         int
+	SealingSectorsLimit       int
+	PricingRules              pricing.PricingRules
+	PricingRulesDefaultReject bool
 }
 
 // BidParams defines how bids are made.
@@ -148,10 +151,12 @@ type Service struct {
 	store      *bidstore.Store
 	subscribed bool
 
-	bidParams           BidParams
-	auctionFilters      AuctionFilters
-	bytesLimiter        limiter.Limiter
-	sealingSectorsLimit int
+	bidParams                 BidParams
+	auctionFilters            AuctionFilters
+	bytesLimiter              limiter.Limiter
+	sealingSectorsLimit       int
+	pricingRules              pricing.PricingRules
+	pricingRulesDefaultReject bool
 
 	ctx       context.Context
 	finalizer *finalizer.Finalizer
@@ -213,16 +218,21 @@ func New(
 	}
 
 	srv := &Service{
-		peer:                p,
-		fc:                  fc,
-		lc:                  lc,
-		store:               s,
-		bidParams:           conf.BidParams,
-		auctionFilters:      conf.AuctionFilters,
-		bytesLimiter:        conf.BytesLimiter,
-		sealingSectorsLimit: conf.SealingSectorsLimit,
-		ctx:                 ctx,
-		finalizer:           fin,
+		peer:                      p,
+		fc:                        fc,
+		lc:                        lc,
+		store:                     s,
+		bidParams:                 conf.BidParams,
+		auctionFilters:            conf.AuctionFilters,
+		bytesLimiter:              conf.BytesLimiter,
+		sealingSectorsLimit:       conf.SealingSectorsLimit,
+		pricingRules:              conf.PricingRules,
+		pricingRulesDefaultReject: conf.PricingRulesDefaultReject,
+		ctx:                       ctx,
+		finalizer:                 fin,
+	}
+	if srv.pricingRules == nil {
+		srv.pricingRules = pricing.EmptyRules{}
 	}
 	log.Info("service started")
 
@@ -385,25 +395,23 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		return nil
 	}
 
-	// Create bids topic
-	topic, err := s.peer.NewTopic(s.ctx, auction.BidsTopic(auction.ID(a.Id)), false)
-	if err != nil {
-		return fmt.Errorf("creating bids topic: %v", err)
+	prices, valid := s.pricingRules.PricesFor(a)
+	if !valid && s.pricingRulesDefaultReject {
+		return nil
 	}
-	defer func() {
-		if err := topic.Close(); err != nil {
-			log.Errorf("closing bids topic: %v", err)
-		}
-	}()
-	topic.SetEventHandler(s.eventHandler)
+	if !prices.UnverifiedPriceValid {
+		prices.UnverifiedPrice = s.bidParams.AskPrice
+	}
+	if !prices.VerifiedPriceValid {
+		prices.VerifiedPrice = s.bidParams.VerifiedAskPrice
+	}
 
-	// Submit bid to auctioneer
 	bid := &pb.Bid{
 		AuctionId:         a.Id,
 		StorageProviderId: s.bidParams.StorageProviderID,
 		WalletAddrSig:     []byte("***"),
-		AskPrice:          s.bidParams.AskPrice,
-		VerifiedAskPrice:  s.bidParams.VerifiedAskPrice,
+		AskPrice:          prices.UnverifiedPrice,
+		VerifiedAskPrice:  prices.VerifiedPrice,
 		StartEpoch:        startEpoch,
 		FastRetrieval:     s.bidParams.FastRetrieval,
 	}
@@ -419,6 +427,19 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		return fmt.Errorf("marshaling message: %v", err)
 	}
 
+	// Create bids topic
+	topic, err := s.peer.NewTopic(s.ctx, auction.BidsTopic(auction.ID(a.Id)), false)
+	if err != nil {
+		return fmt.Errorf("creating bids topic: %v", err)
+	}
+	defer func() {
+		if err := topic.Close(); err != nil {
+			log.Errorf("closing bids topic: %v", err)
+		}
+	}()
+	topic.SetEventHandler(s.eventHandler)
+
+	// Submit bid to auctioneer
 	ctx2, cancel2 := context.WithTimeout(s.ctx, bidsAckTimeout)
 	defer cancel2()
 	res, err := topic.Publish(ctx2, msg)
