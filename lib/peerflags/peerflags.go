@@ -20,7 +20,7 @@ var Flags = []cli.Flag{
 	{
 		Name:        "fake-mode",
 		DefValue:    false,
-		Description: "Avoid owner wallet-address verification",
+		Description: "Avoid owner wallet-address verification. Use only for test purposes.",
 	},
 	{
 		Name:        "private-key",

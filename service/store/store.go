@@ -662,6 +662,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 		return
 	}
 	keepFiles := make(map[string]struct{})
+	removeFiles := make(map[string]struct{})
 	for _, bid := range bids {
 		if discardOrphanDealsAfter > 0 &&
 			bid.Status == BidStatusAwaitingProposal &&
@@ -676,6 +677,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 			}
 		} else if bid.Status == BidStatusFinalized {
 			log.Debugf("will remove deal data for finalized deal %s", bid.ID)
+			removeFiles[s.dealDataFilePathFor(bid.ID, bid.PayloadCid.String())] = struct{}{}
 		} else {
 			keepFiles[s.dealDataFilePathFor(bid.ID, bid.PayloadCid.String())] = struct{}{}
 		}
@@ -688,14 +690,21 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 		if info.IsDir() {
 			return nil
 		}
-		if _, exists := keepFiles[path]; !exists {
-			if err := os.Remove(path); err != nil {
-				log.Errorf("error removing %s: %v", path, err)
-				return nil
+		shouldRemove := false
+		if _, exists := removeFiles[path]; exists {
+			shouldRemove = true
+		} else if _, exists := keepFiles[path]; !exists {
+			if time.Since(info.ModTime()) > discardOrphanDealsAfter {
+				shouldRemove = true
 			}
-			log.Debugf("removed %s", path)
-			filesRemoved++
 		}
+		if err := os.Remove(path); err != nil {
+			log.Errorf("error removing %s: %v", path, err)
+			return nil
+		}
+		log.Debugf("removed %s", path)
+		filesRemoved++
+
 		return nil
 	}
 	err = filepath.Walk(s.dealDataDirectory, walk)
