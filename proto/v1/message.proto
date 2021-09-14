@@ -12,6 +12,7 @@ message Auction {
     uint64 fil_epoch_deadline = 5;
     Sources sources = 6;
     google.protobuf.Timestamp ends_at = 7;
+    string client_address = 8;
 }
 
 message Bid {

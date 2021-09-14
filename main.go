@@ -29,13 +29,13 @@ import (
 	"github.com/textileio/bidbot/buildinfo"
 	"github.com/textileio/bidbot/httpapi"
 	"github.com/textileio/bidbot/lib/auction"
-	"github.com/textileio/bidbot/lib/common"
 	"github.com/textileio/bidbot/lib/dshelper"
 	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/lib/peerflags"
 	"github.com/textileio/bidbot/service"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
+	"github.com/textileio/bidbot/service/pricing"
 	"github.com/textileio/bidbot/service/store"
 	"github.com/textileio/cli"
 	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
@@ -166,13 +166,24 @@ Zero means no limits`,
 			Description: `The timeout to fetch deal data. Be conservative to leave enough room for network instability.`,
 		},
 
+		{
+			Name:        "cid-gravity-key",
+			DefValue:    "",
+			Description: "The API key to the CID gravity system. No CID gravity integration by default.",
+		},
+
+		{
+			Name:        "cid-gravity-default-reject",
+			DefValue:    true,
+			Description: "Stop bidding if there's any problem loading cid-gravity pricing.",
+		},
+
 		{Name: "lotus-miner-api-maddr", DefValue: "/ip4/127.0.0.1/tcp/2345/http",
 			Description: "Lotus miner API multiaddress"},
 		{Name: "lotus-miner-api-token", DefValue: "",
 			Description: "Lotus miner API authorization token with write permission"},
 		{Name: "lotus-api-conn-retries", DefValue: "2", Description: "Lotus API connection retries"},
 		{Name: "lotus-gateway-url", DefValue: "https://api.node.glif.io", Description: "Lotus gateway URL"},
-		{Name: "metrics-addr", DefValue: ":9090", Description: "Prometheus listen address"},
 		{Name: "log-debug", DefValue: false, Description: "Enable debug level log"},
 		{Name: "log-json", DefValue: false, Description: "Enable structured logging"},
 	}
@@ -317,9 +328,6 @@ var daemonCmd = &cobra.Command{
 		cli.CheckErrf("creating datastore: %v", err)
 		fin.Add(store)
 
-		err = common.SetupInstrumentation(v.GetString("metrics.addr"))
-		cli.CheckErrf("booting instrumentation: %v", err)
-
 		walletAddrSig, err := hex.DecodeString(v.GetString("wallet-addr-sig"))
 		cli.CheckErrf("decoding wallet address signature: %v", err)
 
@@ -372,9 +380,14 @@ var daemonCmd = &cobra.Command{
 					Max: v.GetUint64("deal-size-max"),
 				},
 			},
-			BytesLimiter:        bytesLimiter,
-			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
-			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
+			BytesLimiter:              bytesLimiter,
+			ConcurrentImports:         v.GetInt("concurrent-imports-limit"),
+			SealingSectorsLimit:       v.GetInt("sealing-sectors-limit"),
+			PricingRules:              pricing.EmptyRules{},
+			PricingRulesDefaultReject: v.GetBool("cid-gravity-default-reject"),
+		}
+		if cidGravityKey := v.GetString("cid-gravity-key"); cidGravityKey != "" {
+			config.PricingRules = pricing.NewCIDGravityRules(cidGravityKey)
 		}
 		serv, err := service.New(config, store, lc, fc)
 		cli.CheckErrf("starting service: %v", err)
