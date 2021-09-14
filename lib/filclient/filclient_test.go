@@ -7,7 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "github.com/textileio/bidbot/lib/filclient"
+	"github.com/textileio/bidbot/lib/filclient"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 
 func TestFilClient_GetChainHeight(t *testing.T) {
 	t.Parallel()
-	client, err := New(lotusGatewayURL, true)
+	client, err := filclient.New(lotusGatewayURL, true)
 	require.NoError(t, err)
 
 	height, err := client.GetChainHeight()
@@ -31,7 +31,7 @@ func TestFilClient_GetChainHeight(t *testing.T) {
 // Running in fake-mode isn't basically doing anything.
 func TestFilClient_VerifyBidder(t *testing.T) {
 	t.Parallel()
-	client, err := New(lotusGatewayURL, true)
+	client, err := filclient.New(lotusGatewayURL, true)
 	require.NoError(t, err)
 
 	sigBytes, err := hex.DecodeString(bidderSig)

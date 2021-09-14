@@ -698,13 +698,14 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 				shouldRemove = true
 			}
 		}
-		if err := os.Remove(path); err != nil {
-			log.Errorf("error removing %s: %v", path, err)
-			return nil
+		if shouldRemove {
+			if err := os.Remove(path); err != nil {
+				log.Errorf("error removing %s: %v", path, err)
+				return nil
+			}
+			log.Debugf("removed %s", path)
+			filesRemoved++
 		}
-		log.Debugf("removed %s", path)
-		filesRemoved++
-
 		return nil
 	}
 	err = filepath.Walk(s.dealDataDirectory, walk)
