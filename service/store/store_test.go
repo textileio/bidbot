@@ -226,6 +226,12 @@ func TestStore_GC(t *testing.T) {
 	require.NoError(t, err)
 	_ = f.Close()
 
+	manualFile := s.dealDataFilePathFor("", failBid.PayloadCid.String())
+	// simulate manually downloaded file
+	f, err = os.Create(manualFile)
+	require.NoError(t, err)
+	_ = f.Close()
+
 	hangingBid, _ = s.GetBid(hangingBid.ID)
 	assert.Equal(t, BidStatusAwaitingProposal, hangingBid.Status)
 
@@ -235,14 +241,19 @@ func TestStore_GC(t *testing.T) {
 	require.True(t, os.IsNotExist(err), "file for finalized deal should have been removed")
 	_, err = os.Stat(failFile)
 	require.NoError(t, err, "file for errored deal should always be kept")
+	_, err = os.Stat(manualFile)
+	require.NoError(t, err, "manually downloaded file should have been kept")
+
 	_, err = s.GetBid(hangingBid.ID)
 	require.NoError(t, err, "not cleaning orphan deals")
 
 	// GC with discarding orphan deals
-	s.GC(time.Second)
+	time.Sleep(100 * time.Millisecond)
+	s.GC(100 * time.Millisecond)
 	_, err = os.Stat(failFile)
 	require.NoError(t, err, "file for errored deal should always be kept")
-	//
+	_, err = os.Stat(manualFile)
+	require.Error(t, err, "manually downloaded file should be discarded")
 	_, err = s.GetBid(hangingBid.ID)
 	require.Equal(t, ErrBidNotFound, err, "orphan deals should have been cleaned up")
 }

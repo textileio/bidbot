@@ -694,7 +694,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 		if _, exists := removeFiles[path]; exists {
 			shouldRemove = true
 		} else if _, exists := keepFiles[path]; !exists {
-			if time.Since(info.ModTime()) > discardOrphanDealsAfter {
+			if discardOrphanDealsAfter > 0 && time.Since(info.ModTime()) > discardOrphanDealsAfter {
 				shouldRemove = true
 			}
 		}
