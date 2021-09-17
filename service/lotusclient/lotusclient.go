@@ -163,6 +163,7 @@ func newBuilder(maddrs string, authToken string, connRetries int) (clientBuilder
 			closer, err = jsonrpc.NewMergeClient(context.Background(), "ws://"+addr+"/rpc/v0", "Filecoin",
 				[]interface{}{
 					&api.CommonStruct.Internal,
+					&api.NetStruct.Internal,
 					&api.Internal,
 				}, headers)
 			if err == nil {
