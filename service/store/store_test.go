@@ -122,7 +122,6 @@ func TestStore_SaveBid(t *testing.T) {
 }
 
 func TestStore_StatusProgression(t *testing.T) {
-	t.Parallel()
 	s, dag, bs := newStore(t)
 	t.Run("happy path", func(t *testing.T) {
 		bid := newBid(t, dag, true)
@@ -179,7 +178,6 @@ func TestStore_StatusProgression(t *testing.T) {
 		got, err = s.GetBid(id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusAwaitingProposal, got.Status)
-
 		err = s.SetProposalCid(id, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
 		require.NoError(t, err)
 
