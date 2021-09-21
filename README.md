@@ -1,6 +1,6 @@
 # bidbot
 
-Bidbot is a Filecoin Network sidecar for miners to bid in storage deal auctions.
+Bidbot is a Filecoin Network sidecar for storage providers to bid in storage deal auctions.
 
 [![Made by Textile](https://img.shields.io/badge/made%20by-Textile-informational.svg)](https://textile.io)
 [![Chat on Slack](https://img.shields.io/badge/slack-slack.textile.io-informational.svg)](https://slack.textile.io)
@@ -31,7 +31,7 @@ make install
 # What is the Storage Broker?
 
 First, we must understand that `bidbot` is a piece that's part of a bigger picture: the storage broker.
-The storage broker (SB) is a system that receives data from multiple clients, aggregates them, and makes it available for miners to store. The SB has several unique properties that make it different than your typical Filecoin client. 
+The storage broker (SB) is a system that receives data from multiple clients, aggregates them, and makes it available for storage providers to store. The SB has several unique properties that make it different than your typical Filecoin client. 
 
 1. Miners connect to the SB to discover available data payloads awaiting deals.
 2. Miners bid on deals in real time to offer the best storage solution for each payload.
@@ -41,33 +41,33 @@ Currently the storage-broker is creating a slow stream of auctions, so you might
 
 ### How it works
 
-Whenever the SB has aggregates a minimum threshold of data, it attempts to make deals with miners. Data payloads awaiting storage is described by the usual attributes you're familiar with in Filecoin:
+Whenever the SB has aggregates a minimum threshold of data, it attempts to make deals with storage providers. Data payloads awaiting storage is described by the usual attributes you're familiar with in Filecoin:
 
 - PayloadCid (cid)
 - PieceCid (cid)
 - DealSize (int64 in bytes)
 - VerifiedDeal (bool)
 
-To initiate the storage of the new payload, the SB creates an *auction*. The *auction* is published to all connected miners to notify them that a new payload is awaiting storage on Filecoin. 
+To initiate the storage of the new payload, the SB creates an *auction*. The *auction* is published to all connected storage providers to notify them that a new payload is awaiting storage on Filecoin. 
 
 To understand better what this is about, consider the following chat:
 
-- [Storage Broker]: "Hey miners, there's a new Auction for a dataset with size X, PayloadCid X, PieceCid X, and PieceSize X. This data will be created with a verified deal. Who's interested?"
+- [Storage Broker]: "Hey storage providers, there's a new Auction for a dataset with size X, PayloadCid X, PieceCid X, and PieceSize X. This data will be created with a verified deal. Who's interested?"
 - [Miner-A]: "Me! Here's my Bid: price-per-epoch=0.0001FIL and I promise to accept a deal proposal with *DealStartEpoch=XXXX".*
 - [Miner-B]: Hey, me too! My price is 0.00000001FIL, and I promise to accept a deal proposal with DealStartepoch=YYYYY".
 - [Miner-C]: Uhm, I'm too busy now... I won't bid here and just let this pass. Maybe in the next auction!
 
-Miners will send *bids* to show their interest in participating in the auction. Bids provide the SB multiple pieces of information (i.e. price, start epoch, etc) about the miner's storage intent. Unlike the chat based auction, miners connected to the SB can configure bidding to happen automatically as fast as the miner's infrastructure can handle. 
+Miners will send *bids* to show their interest in participating in the auction. Bids provide the SB multiple pieces of information (i.e. price, start epoch, etc) about the storage provider's storage intent. Unlike the chat based auction, storage providers connected to the SB can configure bidding to happen automatically as fast as the storage provider's infrastructure can handle. 
 
-The SB collects all bids from connected miners and chooses one or multiple winners. The winning algorithm is still under development, but you can expect that the following facts will help winning an auction:
+The SB collects all bids from connected storage providers and chooses one or multiple winners. The winning algorithm aims to maximize deal success rate for storage clients, while being fair to all storage providers, big or small, new or established. It is open and subject to continuous evolving based on community feedback. Anyone can join the biweekly [Auction Governance meeting](https://textile.notion.site/Auction-Governance-2eb1acae8a204b6e8dbf72752255a008) to contribute. As a rules of thumb, you can expect that the following facts will help winning an auction:
 
-- Provide a low price per epoch.
-- Provide a low DealStartEpoch.
+- Provide a low price per epoch. Verified deals need to be zero-priced for now.
+- Provide a low DealStartEpoch, and confirm the winning deal on chain as quick as possible.
 - Maintain a high deal success from past auctions.
 
 If you win an auction, you will be notified about it! If that weren't the case, you will see the declared winner published on the auction feed and most probably you'll have better luck in the next auction!
 
-The SB relies on offline deals to make deals with miners. After you win an auction, you will pull the deal data from the SB's IPFS nodes. You can think of this flow as an *automatic* offline deal setup where instead of receiving hard drives, you'll pull the data from someplace and then receive the offline-deal proposal.
+The SB relies on offline deals to make deals with storage providers. After you win an auction, you will pull the deal data from the SB's IPFS nodes. You can think of this flow as an *automatic* offline deal setup where instead of receiving hard drives, you'll pull the data from someplace and then receive the offline-deal proposal.
 
 # How do I connect with the system?
 
@@ -155,7 +155,7 @@ You'll also see bids that are proposed in the auction:
 2021-05-28T17:53:03.925-0300    INFO    bidbot/service  service/service.go:269  bidding in auction 01f6tc0ygw6bpyj00e0k17secb from 12D3KooWRhbmhcWGB84qPehvZvtVyzW8qNkdbcX2gGidhAmJBzhi: 
 {                                                                     
   "auction_id": "01f6tc0ygw6bpyj00e0k17secb",                                                                                                
-  "miner_addr": "f02222",                                             
+  "storage_provider_id": "f02222",                                             
   "wallet_addr_sig": "AbkFFEcauFXGH5Ob3gF4TTy9/e+kNX6midH2tl2SKtdgAFb5Qxy6+Gj38bUcRhQAy/bVjmoDC1oBvi1GbbjaGvgB",                                                                                                                                                                          
   "ask_price": 10,                                                    
   "verified_ask_price": 10,                                           
