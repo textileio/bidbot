@@ -169,13 +169,13 @@ Zero means no limits`,
 		{
 			Name:        "cid-gravity-key",
 			DefValue:    "",
-			Description: "The API key to the CID gravity system. No CID gravity integration by default.",
+			Description: "The API key to the CID gravity system. No CID gravity integration if left empty.",
 		},
 
 		{
 			Name:        "cid-gravity-default-reject",
 			DefValue:    true,
-			Description: "Stop bidding if there's any problem loading cid-gravity pricing.",
+			Description: "When CID gravity is enabled, stop bidding if there's any problem loading cid-gravity pricing rules.",
 		},
 
 		{Name: "lotus-miner-api-maddr", DefValue: "/ip4/127.0.0.1/tcp/2345/http",
@@ -284,6 +284,7 @@ var daemonCmd = &cobra.Command{
 		err := cli.ConfigureLogging(v, []string{
 			cliName,
 			"bidbot/service",
+			"bidbot/pricing",
 			"bidbot/store",
 			"bidbot/datauri",
 			"bidbot/api",

@@ -15,17 +15,19 @@ import (
 )
 
 const (
-	// loading turns to background after this timeout.
+	// Use cached rules if they are loaded no earlier than this period.
+	cidGravityCachePeriod = time.Minute
+	// If loading rules from CID gravity API takes longer than this timeout, turn it into background and use the
+	// cached rules for prices lookup.
 	cidGravityLoadRulesTimeout = 5 * time.Second
-	cidGravityCachePeriod      = time.Minute
 )
 
 var (
-	log              = golog.Logger("rules")
-	cidGravityAPIUrl = "https://api.cidgravity.com/api/integration/bidbot"
+	log              = golog.Logger("bidbot/pricing")
+	cidGravityAPIUrl = "https://staging-api.cidgravity.com/api/integrations/bidbot"
 )
 
-// CIDGravityRules is the format CID gravity API returns. Make public to unmarshal JSON payload. Do not use.
+// CIDGravityRules is the format CID gravity API returns. Needs to be public to unmarshal JSON payload. Do not use.
 type CIDGravityRules struct {
 	Blocked         bool
 	MaintenanceMode bool
@@ -47,9 +49,10 @@ type cidGravityRules struct {
 
 // NewCIDGravityRules returns PricingRules based on CID gravity configuration for the storage provider.
 func NewCIDGravityRules(apiKey string) PricingRules {
-	return &cidGravityRules{apiKey: apiKey}
+	return &cidGravityRules{apiKey: apiKey, clientRules: make(map[string]*clientRules)}
 }
 
+// PricesFor looks up prices for the auction based on its client address.
 func (cg *cidGravityRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, valid bool) {
 	cg.lkRules.Lock()
 	rules, exists := cg.clientRules[auction.ClientAddress]
@@ -79,8 +82,9 @@ func newClientRulesFor(apiKey, clientAddress string) *clientRules {
 	return rules
 }
 
-// PricesFor checks the CID gravity rules and returns the resolved prices for the auction. The rules are cached locally
-// for some time. It returns valid = false if the rules were never loaded from the CID gravity API.
+// PricesFor checks the CID gravity rules for one specific client address and returns the resolved prices for the
+// auction. The rules are cached locally for some time. It returns valid = false if the rules were never loaded from the
+// CID gravity API.
 func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, valid bool) {
 	cg.maybeReloadRules(cidGravityAPIUrl, cidGravityLoadRulesTimeout, cidGravityCachePeriod)
 	rules := cg.rules.Load()
@@ -94,6 +98,7 @@ func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, va
 	if rules.(*CIDGravityRules).MaintenanceMode {
 		return
 	}
+	// rules are checked in sequence and the first match wins.
 	for _, r := range rules.(*CIDGravityRules).PricingRules {
 		if auction.DealSize >= r.MinSize && auction.DealSize < r.MaxSize &&
 			auction.DealDuration >= r.MinDuration && auction.DealDuration < r.MaxDuration {
@@ -110,8 +115,8 @@ func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, va
 	return
 }
 
-// maybeReloadRules reloads rules from the CID gravity API if the cache is not expired. It reloads only once if being
-// called concurrently. When loading takes more than the timeout, reloading turns to background and the method returns.
+// maybeReloadRules reloads rules from the CID gravity API if the cache is expired. It reloads only once if being called
+// concurrently. When loading takes more than the timeout, reloading turns to background and the method returns.
 func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cachePeriod time.Duration) {
 	cg.lkLoadRules.Lock()
 	defer cg.lkLoadRules.Unlock()
@@ -119,22 +124,25 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 	if time.Since(lastUpdated) < cachePeriod {
 		return
 	}
+	// use buffered channel to avoid blocking the goroutine when the receiver is gone.
 	chErr := make(chan error, 1)
 	go func() {
 		chErr <- func() error {
-			body := fmt.Sprintf(`{"client_address":"%s"}`, cg.clientAddress)
+			body := fmt.Sprintf(`{"clientAddress":"%s"}`, cg.clientAddress)
 			req, err := http.NewRequest(http.MethodGet, url, strings.NewReader(body))
 			if err != nil {
-				return err
+				return fmt.Errorf("creating HTTP request: %v", err)
 			}
 			req.Header.Set("Authorization", cg.apiKey)
 			etag := cg.rulesETag.Load()
 			if etag != nil {
 				req.Header.Set("If-None-Match", etag.(string))
 			}
+			start := time.Now()
 			resp, err := http.DefaultClient.Do(req)
+			log.Infof("loading rules from API took %v", time.Since(start))
 			if err != nil {
-				return err
+				return fmt.Errorf("contacting CID gravity server: %v", err)
 			}
 			switch resp.StatusCode {
 			case http.StatusOK:
@@ -163,7 +171,7 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 	select {
 	case err := <-chErr:
 		if err != nil {
-			log.Errorf("loading rules: %v", err)
+			log.Errorf("loading rules from API: %v", err)
 		}
 	case <-time.After(timeout):
 	}
