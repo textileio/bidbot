@@ -396,6 +396,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	}
 
 	prices, valid := s.pricingRules.PricesFor(a)
+	log.Infof("pricing engine result valid for auction %s?: %v, details: %+v", a.Id, valid, prices)
 	if !valid && s.pricingRulesDefaultReject {
 		return nil
 	}

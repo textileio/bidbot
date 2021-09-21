@@ -142,7 +142,7 @@ func TestMaybeReloadRules(t *testing.T) {
 				require.NoError(t, err)
 				params := make(map[string]string)
 				require.NoError(t, json.Unmarshal(b, &params))
-				assert.Equal(t, "pk", params["client_address"])
+				assert.Equal(t, "pk", params["clientAddress"])
 				if req.Header.Get("If-None-Match") == testCase.etag {
 					rw.WriteHeader(http.StatusNotModified)
 				} else {
