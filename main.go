@@ -174,7 +174,7 @@ Zero means no limits`,
 
 		{
 			Name:        "cid-gravity-default-reject",
-			DefValue:    true,
+			DefValue:    false,
 			Description: "When CID gravity is enabled, stop bidding if there's any problem loading cid-gravity pricing rules.",
 		},
 

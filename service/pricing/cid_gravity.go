@@ -15,16 +15,15 @@ import (
 )
 
 const (
-	// Use cached rules if they are loaded no earlier than this period.
-	cidGravityCachePeriod = time.Minute
-	// If loading rules from CID gravity API takes longer than this timeout, turn it into background and use the
-	// cached rules for prices lookup.
+	// If loading rules from CID gravity API takes longer than this timeout, turn it into background.
 	cidGravityLoadRulesTimeout = 5 * time.Second
 )
 
 var (
 	log              = golog.Logger("bidbot/pricing")
-	cidGravityAPIUrl = "https://staging-api.cidgravity.com/api/integrations/bidbot"
+	cidGravityAPIUrl = "https://api.cidgravity.com/api/integrations/bidbot"
+	// Use cached rules if they are loaded no earlier than this period.
+	cidGravityCachePeriod = time.Minute
 )
 
 // CIDGravityRules is the format CID gravity API returns. Needs to be public to unmarshal JSON payload. Do not use.
@@ -83,15 +82,19 @@ func newClientRulesFor(apiKey, clientAddress string) *clientRules {
 }
 
 // PricesFor checks the CID gravity rules for one specific client address and returns the resolved prices for the
-// auction. The rules are cached locally for some time. It returns valid = false if the rules were never loaded from the
-// CID gravity API.
+// auction. The rules are cached locally for some time. It returns valid = false if the cached rules were expired but
+// couldn't be reloaded from the CID gravity API in time.
 func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, valid bool) {
-	cg.maybeReloadRules(cidGravityAPIUrl, cidGravityLoadRulesTimeout, cidGravityCachePeriod)
-	rules := cg.rules.Load()
-	if rules == nil {
+	valid = cg.maybeReloadRules(cidGravityAPIUrl, cidGravityLoadRulesTimeout, cidGravityCachePeriod)
+	if !valid {
 		return
 	}
-	valid = true
+	rules := cg.rules.Load()
+	// preventive but should not happen
+	if rules == nil {
+		valid = false
+		return
+	}
 	if rules.(*CIDGravityRules).Blocked {
 		return
 	}
@@ -115,19 +118,20 @@ func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, va
 	return
 }
 
-// maybeReloadRules reloads rules from the CID gravity API if the cache is expired. It reloads only once if being called
-// concurrently. When loading takes more than the timeout, reloading turns to background and the method returns.
-func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cachePeriod time.Duration) {
+// maybeReloadRules reloads rules from the CID gravity API if the cache expires. It reloads only once if being called
+// concurrently. When loading takes more than the timeout, reloading turns to background and the method returns. The
+// return value indicates if the cached rules are valid.
+func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cachePeriod time.Duration) bool {
 	cg.lkLoadRules.Lock()
 	defer cg.lkLoadRules.Unlock()
 	lastUpdated := cg.rulesLastUpdated.Load().(time.Time)
 	if time.Since(lastUpdated) < cachePeriod {
-		return
+		return true
 	}
 	// use buffered channel to avoid blocking the goroutine when the receiver is gone.
 	chErr := make(chan error, 1)
 	go func() {
-		chErr <- func() error {
+		err := func() error {
 			body := fmt.Sprintf(`{"clientAddress":"%s"}`, cg.clientAddress)
 			req, err := http.NewRequest(http.MethodGet, url, strings.NewReader(body))
 			if err != nil {
@@ -166,13 +170,16 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 			cg.rules.Store(&rules)
 			return nil
 		}()
+		log.Errorf("loading rules from API: %v", err)
+		chErr <- err
 		close(chErr)
 	}()
 	select {
 	case err := <-chErr:
-		if err != nil {
-			log.Errorf("loading rules from API: %v", err)
+		if err == nil {
+			return true
 		}
 	case <-time.After(timeout):
 	}
+	return false
 }
