@@ -45,7 +45,7 @@ func TestRequestCommit(t *testing.T) {
 }
 
 func TestSecure(t *testing.T) {
-	shortExp := time.Millisecond
+	shortExp := 10 * time.Millisecond
 	rl := NewRunningTotalLimiter(5, 50*time.Millisecond)
 	require.True(t, rl.Request("id1", 3, shortExp))
 	require.False(t, rl.Request("id2", 3, shortExp))
