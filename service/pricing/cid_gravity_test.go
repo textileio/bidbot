@@ -15,6 +15,7 @@ import (
 
 func TestPriceFor(t *testing.T) {
 	cidGravityAPIUrl = "http://localhost:invalid" // do not care about rules loading
+	cidGravityCachePeriod = time.Second
 	rules := &CIDGravityRules{
 		PricingRules: []struct {
 			Verified    bool
@@ -64,11 +65,12 @@ func TestPriceFor(t *testing.T) {
 	cg := newClientRulesFor("key", auction.ClientAddress)
 
 	rp, valid := cg.PricesFor(auction)
-	assert.False(t, valid)
+	assert.False(t, valid, "prices should be invalid before the rules are loaded")
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.False(t, rp.VerifiedPriceValid)
 
 	cg.rules.Store(rules)
+	cg.rulesLastUpdated.Store(time.Now())
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
 	assert.False(t, rp.UnverifiedPriceValid)
@@ -103,6 +105,10 @@ func TestPriceFor(t *testing.T) {
 	assert.True(t, valid)
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.False(t, rp.VerifiedPriceValid)
+
+	time.Sleep(cidGravityCachePeriod)
+	rp, valid = cg.PricesFor(auction)
+	assert.False(t, valid, "prices should be invalid when the rules expire")
 }
 
 func TestMaybeReloadRules(t *testing.T) {
