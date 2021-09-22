@@ -185,7 +185,7 @@ Do you think `bidbot` can have other commands that would make your life easier? 
 [CID gravity](https://www.cidgravity.com) is a tool for storage providers to manage clients and price tiers. If integrated, bidbot can bid based on the configuration there, rather than locally configured `--ask-price` and `--verified-ask-price`. There are only two parameters involved.
 
 * `--cid-gravity-key`. You should be able to generate one by clicking the "Integrations" menu item from the CID gravity console.
-* `--cid-gravity-default-reject`. By default, if bidbot can not reach the CID gravity API for some reason, it bids based on the locally configured price. If you want it to stop bidding in that case, set this to true.
+* `--cid-gravity-strict`. By default, if bidbot can not reach the CID gravity API for some reason, it bids based on the locally configured price. If you want it to stop bidding in that case, set this to true.
 
 ## Contributing
 

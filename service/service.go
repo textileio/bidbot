@@ -50,14 +50,14 @@ var (
 
 // Config defines params for Service configuration.
 type Config struct {
-	Peer                      peer.Config
-	BidParams                 BidParams
-	AuctionFilters            AuctionFilters
-	BytesLimiter              limiter.Limiter
-	ConcurrentImports         int
-	SealingSectorsLimit       int
-	PricingRules              pricing.PricingRules
-	PricingRulesDefaultReject bool
+	Peer                peer.Config
+	BidParams           BidParams
+	AuctionFilters      AuctionFilters
+	BytesLimiter        limiter.Limiter
+	ConcurrentImports   int
+	SealingSectorsLimit int
+	PricingRules        pricing.PricingRules
+	PricingRulesStrict  bool
 }
 
 // BidParams defines how bids are made.
@@ -151,12 +151,12 @@ type Service struct {
 	store      *bidstore.Store
 	subscribed bool
 
-	bidParams                 BidParams
-	auctionFilters            AuctionFilters
-	bytesLimiter              limiter.Limiter
-	sealingSectorsLimit       int
-	pricingRules              pricing.PricingRules
-	pricingRulesDefaultReject bool
+	bidParams           BidParams
+	auctionFilters      AuctionFilters
+	bytesLimiter        limiter.Limiter
+	sealingSectorsLimit int
+	pricingRules        pricing.PricingRules
+	pricingRulesStrict  bool
 
 	ctx       context.Context
 	finalizer *finalizer.Finalizer
@@ -218,18 +218,18 @@ func New(
 	}
 
 	srv := &Service{
-		peer:                      p,
-		fc:                        fc,
-		lc:                        lc,
-		store:                     s,
-		bidParams:                 conf.BidParams,
-		auctionFilters:            conf.AuctionFilters,
-		bytesLimiter:              conf.BytesLimiter,
-		sealingSectorsLimit:       conf.SealingSectorsLimit,
-		pricingRules:              conf.PricingRules,
-		pricingRulesDefaultReject: conf.PricingRulesDefaultReject,
-		ctx:                       ctx,
-		finalizer:                 fin,
+		peer:                p,
+		fc:                  fc,
+		lc:                  lc,
+		store:               s,
+		bidParams:           conf.BidParams,
+		auctionFilters:      conf.AuctionFilters,
+		bytesLimiter:        conf.BytesLimiter,
+		sealingSectorsLimit: conf.SealingSectorsLimit,
+		pricingRules:        conf.PricingRules,
+		pricingRulesStrict:  conf.PricingRulesStrict,
+		ctx:                 ctx,
+		finalizer:           fin,
 	}
 	if srv.pricingRules == nil {
 		srv.pricingRules = pricing.EmptyRules{}
@@ -397,7 +397,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 
 	prices, valid := s.pricingRules.PricesFor(a)
 	log.Infof("pricing engine result valid for auction %s?: %v, details: %+v", a.Id, valid, prices)
-	if !valid && s.pricingRulesDefaultReject {
+	if !valid && s.pricingRulesStrict {
 		return nil
 	}
 	if !prices.UnverifiedPriceValid {

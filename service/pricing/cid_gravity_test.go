@@ -16,7 +16,7 @@ import (
 func TestPriceFor(t *testing.T) {
 	cidGravityAPIUrl = "http://localhost:invalid" // do not care about rules loading
 	cidGravityCachePeriod = time.Second
-	rules := &CIDGravityRules{
+	rules := &rawRules{
 		PricingRules: []struct {
 			Verified    bool
 			MinSize     uint64
@@ -27,32 +27,32 @@ func TestPriceFor(t *testing.T) {
 		}{
 			{
 				Verified: false, Price: 100,
-				MinSize: 2 << 20, MaxSize: 2 << 30,
+				MinSize: 2 << 20, MaxSize: 2<<30 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
 				Verified: false, Price: 10,
-				MinSize: 2 << 30, MaxSize: 2 << 40,
+				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
 				Verified: false, Price: 1000,
-				MinSize: 2 << 30, MaxSize: 2 << 40,
+				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 2 >> 10, MaxDuration: 2 << 30,
 			},
 			{
 				Verified: true, Price: 1,
-				MinSize: 1, MaxSize: 2 << 30,
+				MinSize: 1, MaxSize: 2<<30 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
 				Verified: true, Price: 0,
-				MinSize: 2 << 30, MaxSize: 2 << 40,
+				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
 				Verified: true, Price: 100,
-				MinSize: 2 << 30, MaxSize: 2 << 40,
+				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 2 >> 10, MaxDuration: 2 << 30,
 			},
 		},
@@ -165,17 +165,17 @@ func TestMaybeReloadRules(t *testing.T) {
 	t.Run("timeout", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			time.Sleep(100 * time.Millisecond)
-			response, _ := json.Marshal(CIDGravityRules{MaintenanceMode: true})
+			response, _ := json.Marshal(rawRules{MaintenanceMode: true})
 			_, _ = rw.Write(response)
 		}))
 		cg.maybeReloadRules(server.URL, 10*time.Millisecond, 0)
-		rules := cg.rules.Load().(*CIDGravityRules)
+		rules := cg.rules.Load().(*rawRules)
 		assert.False(t, rules.MaintenanceMode, "should have loaded the cached rules")
 		assert.Len(t, rules.PricingRules, 1)
 		assert.Equal(t, uint64(1), rules.PricingRules[0].MinDuration)
 		time.Sleep(100 * time.Millisecond)
 		assert.True(t,
-			cg.rules.Load().(*CIDGravityRules).MaintenanceMode,
+			cg.rules.Load().(*rawRules).MaintenanceMode,
 			"should have loaded the new rules")
 	})
 }

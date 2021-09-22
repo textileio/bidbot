@@ -26,8 +26,7 @@ var (
 	cidGravityCachePeriod = time.Minute
 )
 
-// CIDGravityRules is the format CID gravity API returns. Needs to be public to unmarshal JSON payload. Do not use.
-type CIDGravityRules struct {
+type rawRules struct {
 	Blocked         bool
 	MaintenanceMode bool
 	PricingRules    []struct {
@@ -41,24 +40,24 @@ type CIDGravityRules struct {
 }
 
 type cidGravityRules struct {
-	apiKey      string
-	clientRules map[string]*clientRules
-	lkRules     sync.Mutex
+	apiKey         string
+	perClientRules map[string]*clientRules
+	lkRules        sync.Mutex
 }
 
 // NewCIDGravityRules returns PricingRules based on CID gravity configuration for the storage provider.
 func NewCIDGravityRules(apiKey string) PricingRules {
-	return &cidGravityRules{apiKey: apiKey, clientRules: make(map[string]*clientRules)}
+	return &cidGravityRules{apiKey: apiKey, perClientRules: make(map[string]*clientRules)}
 }
 
 // PricesFor looks up prices for the auction based on its client address.
 func (cg *cidGravityRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, valid bool) {
 	cg.lkRules.Lock()
-	rules, exists := cg.clientRules[auction.ClientAddress]
+	rules, exists := cg.perClientRules[auction.ClientAddress]
 	if !exists {
 		rules = newClientRulesFor(cg.apiKey, auction.ClientAddress)
 	}
-	cg.clientRules[auction.ClientAddress] = rules
+	cg.perClientRules[auction.ClientAddress] = rules
 	cg.lkRules.Unlock()
 	return rules.PricesFor(auction)
 }
@@ -95,16 +94,16 @@ func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, va
 		valid = false
 		return
 	}
-	if rules.(*CIDGravityRules).Blocked {
+	if rules.(*rawRules).Blocked {
 		return
 	}
-	if rules.(*CIDGravityRules).MaintenanceMode {
+	if rules.(*rawRules).MaintenanceMode {
 		return
 	}
 	// rules are checked in sequence and the first match wins.
-	for _, r := range rules.(*CIDGravityRules).PricingRules {
-		if auction.DealSize >= r.MinSize && auction.DealSize < r.MaxSize &&
-			auction.DealDuration >= r.MinDuration && auction.DealDuration < r.MaxDuration {
+	for _, r := range rules.(*rawRules).PricingRules {
+		if auction.DealSize >= r.MinSize && auction.DealSize <= r.MaxSize &&
+			auction.DealDuration >= r.MinDuration && auction.DealDuration <= r.MaxDuration {
 			if r.Verified && !prices.VerifiedPriceValid {
 				prices.VerifiedPriceValid, prices.VerifiedPrice = true, r.Price
 			} else if !prices.UnverifiedPriceValid {
@@ -162,12 +161,12 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 			if err != nil {
 				return fmt.Errorf("reading http response: %v", err)
 			}
-			var rules CIDGravityRules
+			var rules rawRules
 			if err := json.Unmarshal(b, &rules); err != nil {
 				return fmt.Errorf("unmarshalling rules: %v", err)
 			}
-			cg.rulesLastUpdated.Store(time.Now())
 			cg.rules.Store(&rules)
+			cg.rulesLastUpdated.Store(time.Now())
 			return nil
 		}()
 		log.Errorf("loading rules from API: %v", err)

@@ -173,7 +173,7 @@ Zero means no limits`,
 		},
 
 		{
-			Name:        "cid-gravity-default-reject",
+			Name:        "cid-gravity-strict",
 			DefValue:    false,
 			Description: "When CID gravity is enabled, stop bidding if there's any problem loading cid-gravity pricing rules.",
 		},
@@ -381,11 +381,11 @@ var daemonCmd = &cobra.Command{
 					Max: v.GetUint64("deal-size-max"),
 				},
 			},
-			BytesLimiter:              bytesLimiter,
-			ConcurrentImports:         v.GetInt("concurrent-imports-limit"),
-			SealingSectorsLimit:       v.GetInt("sealing-sectors-limit"),
-			PricingRules:              pricing.EmptyRules{},
-			PricingRulesDefaultReject: v.GetBool("cid-gravity-default-reject"),
+			BytesLimiter:        bytesLimiter,
+			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
+			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
+			PricingRules:        pricing.EmptyRules{},
+			PricingRulesStrict:  v.GetBool("cid-gravity-strict"),
 		}
 		if cidGravityKey := v.GetString("cid-gravity-key"); cidGravityKey != "" {
 			config.PricingRules = pricing.NewCIDGravityRules(cidGravityKey)
