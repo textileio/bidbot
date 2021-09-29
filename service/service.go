@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	core "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/oklog/ulid/v2"
 	pb "github.com/textileio/bidbot/gen/v1"
@@ -25,6 +26,7 @@ import (
 	"github.com/textileio/bidbot/service/lotusclient"
 	"github.com/textileio/bidbot/service/pricing"
 	bidstore "github.com/textileio/bidbot/service/store"
+	tcrypto "github.com/textileio/crypto"
 	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
 	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
@@ -146,6 +148,7 @@ func (f *MinMaxFilter) Validate() error {
 // Service is a miner service that subscribes to brokered deals.
 type Service struct {
 	peer       *peer.Peer
+	decryptKey tcrypto.DecryptionKey
 	fc         filclient.FilClient
 	lc         lotusclient.LotusClient
 	store      *bidstore.Store
@@ -217,8 +220,18 @@ func New(
 		return nil, fin.Cleanup(fmt.Errorf("invalid StorageProvider ID or signature"))
 	}
 
+	privKey, err := crypto.MarshalPrivateKey(conf.Peer.PrivKey)
+	if err != nil {
+		return nil, fin.Cleanupf("marshaling private key: %v", err)
+	}
+	decryptKey, err := tcrypto.DecryptionKeyFromBytes(privKey)
+	if err != nil {
+		return nil, fin.Cleanupf("creating decryption key: %v", err)
+	}
+
 	srv := &Service{
 		peer:                p,
+		decryptKey:          decryptKey,
 		fc:                  fc,
 		lc:                  lc,
 		store:               s,
@@ -364,21 +377,6 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		}
 	}
 
-	sources, err := cast.SourcesFromPb(a.Sources)
-	if err != nil {
-		return err
-	}
-	// Ensure we can fetch the data
-	dataURI, err := datauri.NewFromSources(a.PayloadCid, sources)
-	if err != nil {
-		return fmt.Errorf("parsing data uri: %v", err)
-	}
-	ctx, cancel := context.WithTimeout(s.ctx, dataURIValidateTimeout)
-	defer cancel()
-	if err := dataURI.Validate(ctx); err != nil {
-		return fmt.Errorf("validating data uri: %v", err)
-	}
-
 	if err := s.store.HealthCheck(); err != nil {
 		return fmt.Errorf("store not ready to bid: %v", err)
 	}
@@ -465,7 +463,6 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		PayloadCid:       payloadCid,
 		DealSize:         a.DealSize,
 		DealDuration:     a.DealDuration,
-		Sources:          sources,
 		AskPrice:         bid.AskPrice,
 		VerifiedAskPrice: bid.VerifiedAskPrice,
 		StartEpoch:       bid.StartEpoch,
@@ -503,28 +500,50 @@ func (s *Service) filterAuction(auction *pb.Auction) (rejectReason string) {
 func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
 	log.Debugf("%s received win from %s", topic, from)
 
-	win := &pb.WinningBid{}
-	if err := proto.Unmarshal(msg, win); err != nil {
+	wb := &pb.WinningBid{}
+	if err := proto.Unmarshal(msg, wb); err != nil {
 		return nil, fmt.Errorf("unmarshaling message: %v", err)
 	}
 
-	bid, err := s.store.GetBid(auction.BidID(win.BidId))
+	bid, err := s.store.GetBid(auction.BidID(wb.BidId))
 	if err != nil {
-		log.Errorf("error getting bid, assuming bytes limit is not hit: %v", err)
-	} else {
-		// request for some quota, which may be used or gets expired if lossing
-		// the auction.
-		granted := s.bytesLimiter.Request(win.AuctionId, bid.DealSize, BidsExpiration)
-		if !granted {
-			return nil, errWouldExceedRunningBytesLimit
-		}
+		return nil, fmt.Errorf("getting bid: %v", err)
+	}
+	// request for some quota, which may be used or gets expired if not winning
+	// the auction.
+	granted := s.bytesLimiter.Request(wb.AuctionId, bid.DealSize, BidsExpiration)
+	if !granted {
+		return nil, errWouldExceedRunningBytesLimit
 	}
 
-	if err := s.store.SetAwaitingProposalCid(auction.BidID(win.BidId)); err != nil {
+	decrypted, err := s.decryptKey.Decrypt(wb.EncryptedSources)
+	if err != nil {
+		return nil, fmt.Errorf("decrypting sources: %v", err)
+	}
+	sourcesPb := &pb.Sources{}
+	if err := proto.Unmarshal(decrypted, sourcesPb); err != nil {
+		return nil, fmt.Errorf("unmarshaling sources: %v", err)
+	}
+	sources, err := cast.SourcesFromPb(sourcesPb)
+	if err != nil {
+		return nil, fmt.Errorf("sources from pb: %v", err)
+	}
+	// Ensure we can fetch the data
+	dataURI, err := datauri.NewFromSources(bid.PayloadCid.String(), sources)
+	if err != nil {
+		return nil, fmt.Errorf("parsing data uri: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(s.ctx, dataURIValidateTimeout)
+	defer cancel()
+	if err := dataURI.Validate(ctx); err != nil {
+		return nil, fmt.Errorf("validating data uri: %v", err)
+	}
+
+	if err := s.store.SetAwaitingProposalCid(auction.BidID(wb.BidId), sources); err != nil {
 		return nil, fmt.Errorf("setting awaiting proposal cid: %v", err)
 	}
 
-	log.Infof("bid %s won in auction %s; awaiting proposal cid", win.BidId, win.AuctionId)
+	log.Infof("bid %s won in auction %s; awaiting proposal cid", wb.BidId, wb.AuctionId)
 	return nil, nil
 }
 

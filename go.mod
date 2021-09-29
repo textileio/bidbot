@@ -9,7 +9,6 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-state-types v0.1.1-0.20210810190654-139e0e79e69e
 	github.com/filecoin-project/lotus v1.11.2
-	github.com/gogo/status v1.1.0
 	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
@@ -38,19 +37,15 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954 // indirect
 	github.com/textileio/cli v1.0.0
+	github.com/textileio/crypto v0.0.0-20210929130053-08edebc3361a
 	github.com/textileio/go-datastore-extensions v1.0.1
 	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
 	github.com/textileio/go-ds-mongo v0.1.4
 	github.com/textileio/go-libp2p-pubsub-rpc v0.0.5
 	github.com/textileio/go-log/v2 v2.1.3-gke-2
 	github.com/urfave/cli/v2 v2.3.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/runtime v0.21.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.21.0
 	go.opentelemetry.io/otel/metric v0.21.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.21.0
-	go.opentelemetry.io/otel/sdk/metric v0.21.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
 )
 

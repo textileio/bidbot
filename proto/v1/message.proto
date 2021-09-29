@@ -10,7 +10,7 @@ message Auction {
     uint64 deal_size = 3;
     uint64 deal_duration = 4;
     uint64 fil_epoch_deadline = 5;
-    Sources sources = 6;
+    Sources sources = 6; // Obsolete. For back compatibility only. Empty for closed auctions. 
     google.protobuf.Timestamp ends_at = 7;
     string client_address = 8;
 }
@@ -28,6 +28,7 @@ message Bid {
 message WinningBid {
     string auction_id = 1;
     string bid_id = 2;
+    bytes encrypted_sources = 3; // Sources message encrypted by bidbot's public key.
 }
 
 message WinningBidProposal {

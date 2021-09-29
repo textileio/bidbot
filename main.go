@@ -390,6 +390,7 @@ var daemonCmd = &cobra.Command{
 		if cidGravityKey := v.GetString("cid-gravity-key"); cidGravityKey != "" {
 			config.PricingRules = pricing.NewCIDGravityRules(cidGravityKey)
 		}
+
 		serv, err := service.New(config, store, lc, fc)
 		cli.CheckErrf("starting service: %v", err)
 		fin.Add(serv)

@@ -133,7 +133,7 @@ func TestStore_StatusProgression(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusSubmitted, got.Status)
 
-		err = s.SetAwaitingProposalCid(id)
+		err = s.SetAwaitingProposalCid(id, bid.Sources)
 		require.NoError(t, err)
 		got, err = s.GetBid(id)
 		require.NoError(t, err)
@@ -173,7 +173,7 @@ func TestStore_StatusProgression(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusSubmitted, got.Status)
 
-		err = s.SetAwaitingProposalCid(id)
+		err = s.SetAwaitingProposalCid(id, bid.Sources)
 		require.NoError(t, err)
 		got, err = s.GetBid(id)
 		require.NoError(t, err)
@@ -201,11 +201,11 @@ func TestStore_GC(t *testing.T) {
 	_ = s.SaveBid(*failBid)
 	_ = s.SaveBid(*hangingBid)
 
-	_ = s.SetAwaitingProposalCid(successfulBid.ID)
+	_ = s.SetAwaitingProposalCid(successfulBid.ID, successfulBid.Sources)
 	_ = s.SetProposalCid(successfulBid.ID, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
-	_ = s.SetAwaitingProposalCid(failBid.ID)
+	_ = s.SetAwaitingProposalCid(failBid.ID, failBid.Sources)
 	_ = s.SetProposalCid(failBid.ID, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
-	_ = s.SetAwaitingProposalCid(hangingBid.ID)
+	_ = s.SetAwaitingProposalCid(hangingBid.ID, hangingBid.Sources)
 
 	// Allow to finish
 	time.Sleep(time.Second * 1)
