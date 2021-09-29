@@ -174,14 +174,14 @@ func TestBytesLimit(t *testing.T) {
 					wins, _ = mockAuctioneer.NewTopic(ctx, core.WinsTopic(from), false)
 					proposals, _ = mockAuctioneer.NewTopic(ctx, core.ProposalsTopic(from), false)
 				})
-				sourcesPb, err := proto.Marshal(cast.SourcesToPb(sources))
+				confidential, err := proto.Marshal(&pb.WinningBidConfidential{Sources: cast.SourcesToPb(sources)})
 				require.NoError(t, err)
-				encryptedSources, err := encryptKey.Encrypt(sourcesPb)
+				encrypted, err := encryptKey.Encrypt(confidential)
 				require.NoError(t, err)
 				msg, err := proto.Marshal(&pb.WinningBid{
-					AuctionId:        pbid.AuctionId,
-					BidId:            bidID,
-					EncryptedSources: encryptedSources,
+					AuctionId: pbid.AuctionId,
+					BidId:     bidID,
+					Encrypted: encrypted,
 				})
 				require.NoError(t, err)
 				resp, err := wins.Publish(ctx, msg)
