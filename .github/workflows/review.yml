@@ -7,7 +7,7 @@ on:
   pull_request:
 
 concurrency:
-  group: test-${{github.ref}}
+  group: review-${{github.ref}}
   cancel-in-progress: true
 
 jobs:
