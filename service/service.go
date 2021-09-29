@@ -516,15 +516,15 @@ func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, e
 		return nil, errWouldExceedRunningBytesLimit
 	}
 
-	decrypted, err := s.decryptKey.Decrypt(wb.EncryptedSources)
+	decrypted, err := s.decryptKey.Decrypt(wb.Encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("decrypting sources: %v", err)
 	}
-	sourcesPb := &pb.Sources{}
-	if err := proto.Unmarshal(decrypted, sourcesPb); err != nil {
+	confidential := &pb.WinningBidConfidential{}
+	if err := proto.Unmarshal(decrypted, confidential); err != nil {
 		return nil, fmt.Errorf("unmarshaling sources: %v", err)
 	}
-	sources, err := cast.SourcesFromPb(sourcesPb)
+	sources, err := cast.SourcesFromPb(confidential.Sources)
 	if err != nil {
 		return nil, fmt.Errorf("sources from pb: %v", err)
 	}

@@ -28,13 +28,17 @@ message Bid {
 message WinningBid {
     string auction_id = 1;
     string bid_id = 2;
-    bytes encrypted_sources = 3; // Sources message encrypted by bidbot's public key.
+    bytes encrypted = 3; // WinningBidConfidential message encrypted by bidbot's public key.
+}
+
+message WinningBidConfidential {
+  Sources sources = 1;
 }
 
 message WinningBidProposal {
-    string auction_id = 1;
-    string bid_id = 2;
-    string proposal_cid = 3;
+  string auction_id = 1;
+  string bid_id = 2;
+  string proposal_cid = 3;
 }
 
 message Sources {

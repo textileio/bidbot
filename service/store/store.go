@@ -306,9 +306,13 @@ func getBid(reader ds.Read, id auction.BidID) (*Bid, error) {
 	return r, nil
 }
 
-// SetAwaitingProposalCid updates bid status to BidStatusAwaitingProposal.
-// If a bid is not found for id, ErrBidNotFound is returned.
+// SetAwaitingProposalCid updates bid with the given sources and switch status to BidStatusAwaitingProposal. If a bid is
+// not found for id, ErrBidNotFound is returned.
 func (s *Store) SetAwaitingProposalCid(id auction.BidID, sources auction.Sources) error {
+	if err := sources.Validate(); err != nil {
+		return err
+	}
+
 	txn, err := s.store.NewTransaction(false)
 	if err != nil {
 		return fmt.Errorf("creating txn: %v", err)

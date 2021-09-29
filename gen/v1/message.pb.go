@@ -224,9 +224,9 @@ type WinningBid struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AuctionId        string `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
-	BidId            string `protobuf:"bytes,2,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
-	EncryptedSources []byte `protobuf:"bytes,3,opt,name=encrypted_sources,json=encryptedSources,proto3" json:"encrypted_sources,omitempty"` // Sources message encrypted by bidbot's private key.
+	AuctionId string `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
+	BidId     string `protobuf:"bytes,2,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	Encrypted []byte `protobuf:"bytes,3,opt,name=encrypted,proto3" json:"encrypted,omitempty"` // WinningBidConfidential message encrypted by bidbot's public key.
 }
 
 func (x *WinningBid) Reset() {
@@ -275,9 +275,56 @@ func (x *WinningBid) GetBidId() string {
 	return ""
 }
 
-func (x *WinningBid) GetEncryptedSources() []byte {
+func (x *WinningBid) GetEncrypted() []byte {
 	if x != nil {
-		return x.EncryptedSources
+		return x.Encrypted
+	}
+	return nil
+}
+
+type WinningBidConfidential struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Sources *Sources `protobuf:"bytes,1,opt,name=sources,proto3" json:"sources,omitempty"`
+}
+
+func (x *WinningBidConfidential) Reset() {
+	*x = WinningBidConfidential{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WinningBidConfidential) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WinningBidConfidential) ProtoMessage() {}
+
+func (x *WinningBidConfidential) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WinningBidConfidential.ProtoReflect.Descriptor instead.
+func (*WinningBidConfidential) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *WinningBidConfidential) GetSources() *Sources {
+	if x != nil {
+		return x.Sources
 	}
 	return nil
 }
@@ -295,7 +342,7 @@ type WinningBidProposal struct {
 func (x *WinningBidProposal) Reset() {
 	*x = WinningBidProposal{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1_message_proto_msgTypes[3]
+		mi := &file_v1_message_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -308,7 +355,7 @@ func (x *WinningBidProposal) String() string {
 func (*WinningBidProposal) ProtoMessage() {}
 
 func (x *WinningBidProposal) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_message_proto_msgTypes[3]
+	mi := &file_v1_message_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -321,7 +368,7 @@ func (x *WinningBidProposal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WinningBidProposal.ProtoReflect.Descriptor instead.
 func (*WinningBidProposal) Descriptor() ([]byte, []int) {
-	return file_v1_message_proto_rawDescGZIP(), []int{3}
+	return file_v1_message_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *WinningBidProposal) GetAuctionId() string {
@@ -357,7 +404,7 @@ type Sources struct {
 func (x *Sources) Reset() {
 	*x = Sources{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1_message_proto_msgTypes[4]
+		mi := &file_v1_message_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -370,7 +417,7 @@ func (x *Sources) String() string {
 func (*Sources) ProtoMessage() {}
 
 func (x *Sources) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_message_proto_msgTypes[4]
+	mi := &file_v1_message_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -383,7 +430,7 @@ func (x *Sources) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sources.ProtoReflect.Descriptor instead.
 func (*Sources) Descriptor() ([]byte, []int) {
-	return file_v1_message_proto_rawDescGZIP(), []int{4}
+	return file_v1_message_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Sources) GetCarUrl() *Sources_CARURL {
@@ -411,7 +458,7 @@ type Sources_CARURL struct {
 func (x *Sources_CARURL) Reset() {
 	*x = Sources_CARURL{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1_message_proto_msgTypes[5]
+		mi := &file_v1_message_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -424,7 +471,7 @@ func (x *Sources_CARURL) String() string {
 func (*Sources_CARURL) ProtoMessage() {}
 
 func (x *Sources_CARURL) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_message_proto_msgTypes[5]
+	mi := &file_v1_message_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -437,7 +484,7 @@ func (x *Sources_CARURL) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sources_CARURL.ProtoReflect.Descriptor instead.
 func (*Sources_CARURL) Descriptor() ([]byte, []int) {
-	return file_v1_message_proto_rawDescGZIP(), []int{4, 0}
+	return file_v1_message_proto_rawDescGZIP(), []int{5, 0}
 }
 
 func (x *Sources_CARURL) GetURL() string {
@@ -459,7 +506,7 @@ type Sources_CARIPFS struct {
 func (x *Sources_CARIPFS) Reset() {
 	*x = Sources_CARIPFS{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1_message_proto_msgTypes[6]
+		mi := &file_v1_message_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -472,7 +519,7 @@ func (x *Sources_CARIPFS) String() string {
 func (*Sources_CARIPFS) ProtoMessage() {}
 
 func (x *Sources_CARIPFS) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_message_proto_msgTypes[6]
+	mi := &file_v1_message_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +532,7 @@ func (x *Sources_CARIPFS) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sources_CARIPFS.ProtoReflect.Descriptor instead.
 func (*Sources_CARIPFS) Descriptor() ([]byte, []int) {
-	return file_v1_message_proto_rawDescGZIP(), []int{4, 1}
+	return file_v1_message_proto_rawDescGZIP(), []int{5, 1}
 }
 
 func (x *Sources_CARIPFS) GetCid() string {
@@ -546,13 +593,17 @@ var file_v1_message_proto_rawDesc = []byte{
 	0x28, 0x04, 0x52, 0x0a, 0x73, 0x74, 0x61, 0x72, 0x74, 0x45, 0x70, 0x6f, 0x63, 0x68, 0x12, 0x25,
 	0x0a, 0x0e, 0x66, 0x61, 0x73, 0x74, 0x5f, 0x72, 0x65, 0x74, 0x72, 0x69, 0x65, 0x76, 0x61, 0x6c,
 	0x18, 0x07, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0d, 0x66, 0x61, 0x73, 0x74, 0x52, 0x65, 0x74, 0x72,
-	0x69, 0x65, 0x76, 0x61, 0x6c, 0x22, 0x6f, 0x0a, 0x0a, 0x57, 0x69, 0x6e, 0x6e, 0x69, 0x6e, 0x67,
+	0x69, 0x65, 0x76, 0x61, 0x6c, 0x22, 0x60, 0x0a, 0x0a, 0x57, 0x69, 0x6e, 0x6e, 0x69, 0x6e, 0x67,
 	0x42, 0x69, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x61, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x69,
 	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x61, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e,
 	0x49, 0x64, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x69, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64, 0x12, 0x2b, 0x0a, 0x11, 0x65, 0x6e, 0x63,
-	0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x5f, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x0c, 0x52, 0x10, 0x65, 0x6e, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x53,
+	0x28, 0x09, 0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64, 0x12, 0x1c, 0x0a, 0x09, 0x65, 0x6e, 0x63,
+	0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x65, 0x6e,
+	0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x22, 0x4d, 0x0a, 0x16, 0x57, 0x69, 0x6e, 0x6e, 0x69,
+	0x6e, 0x67, 0x42, 0x69, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61,
+	0x6c, 0x12, 0x33, 0x0a, 0x07, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x19, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x2e, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x52, 0x07, 0x73,
 	0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x22, 0x6d, 0x0a, 0x12, 0x57, 0x69, 0x6e, 0x6e, 0x69, 0x6e,
 	0x67, 0x42, 0x69, 0x64, 0x50, 0x72, 0x6f, 0x70, 0x6f, 0x73, 0x61, 0x6c, 0x12, 0x1d, 0x0a, 0x0a,
 	0x61, 0x75, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
@@ -592,27 +643,29 @@ func file_v1_message_proto_rawDescGZIP() []byte {
 	return file_v1_message_proto_rawDescData
 }
 
-var file_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_v1_message_proto_goTypes = []interface{}{
-	(*Auction)(nil),               // 0: proto.v1.message.Auction
-	(*Bid)(nil),                   // 1: proto.v1.message.Bid
-	(*WinningBid)(nil),            // 2: proto.v1.message.WinningBid
-	(*WinningBidProposal)(nil),    // 3: proto.v1.message.WinningBidProposal
-	(*Sources)(nil),               // 4: proto.v1.message.Sources
-	(*Sources_CARURL)(nil),        // 5: proto.v1.message.Sources.CARURL
-	(*Sources_CARIPFS)(nil),       // 6: proto.v1.message.Sources.CARIPFS
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*Auction)(nil),                // 0: proto.v1.message.Auction
+	(*Bid)(nil),                    // 1: proto.v1.message.Bid
+	(*WinningBid)(nil),             // 2: proto.v1.message.WinningBid
+	(*WinningBidConfidential)(nil), // 3: proto.v1.message.WinningBidConfidential
+	(*WinningBidProposal)(nil),     // 4: proto.v1.message.WinningBidProposal
+	(*Sources)(nil),                // 5: proto.v1.message.Sources
+	(*Sources_CARURL)(nil),         // 6: proto.v1.message.Sources.CARURL
+	(*Sources_CARIPFS)(nil),        // 7: proto.v1.message.Sources.CARIPFS
+	(*timestamppb.Timestamp)(nil),  // 8: google.protobuf.Timestamp
 }
 var file_v1_message_proto_depIdxs = []int32{
-	4, // 0: proto.v1.message.Auction.sources:type_name -> proto.v1.message.Sources
-	7, // 1: proto.v1.message.Auction.ends_at:type_name -> google.protobuf.Timestamp
-	5, // 2: proto.v1.message.Sources.car_url:type_name -> proto.v1.message.Sources.CARURL
-	6, // 3: proto.v1.message.Sources.car_ipfs:type_name -> proto.v1.message.Sources.CARIPFS
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	5, // 0: proto.v1.message.Auction.sources:type_name -> proto.v1.message.Sources
+	8, // 1: proto.v1.message.Auction.ends_at:type_name -> google.protobuf.Timestamp
+	5, // 2: proto.v1.message.WinningBidConfidential.sources:type_name -> proto.v1.message.Sources
+	6, // 3: proto.v1.message.Sources.car_url:type_name -> proto.v1.message.Sources.CARURL
+	7, // 4: proto.v1.message.Sources.car_ipfs:type_name -> proto.v1.message.Sources.CARIPFS
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_v1_message_proto_init() }
@@ -658,7 +711,7 @@ func file_v1_message_proto_init() {
 			}
 		}
 		file_v1_message_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WinningBidProposal); i {
+			switch v := v.(*WinningBidConfidential); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -670,7 +723,7 @@ func file_v1_message_proto_init() {
 			}
 		}
 		file_v1_message_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Sources); i {
+			switch v := v.(*WinningBidProposal); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -682,7 +735,7 @@ func file_v1_message_proto_init() {
 			}
 		}
 		file_v1_message_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Sources_CARURL); i {
+			switch v := v.(*Sources); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -694,6 +747,18 @@ func file_v1_message_proto_init() {
 			}
 		}
 		file_v1_message_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Sources_CARURL); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Sources_CARIPFS); i {
 			case 0:
 				return &v.state
@@ -712,7 +777,7 @@ func file_v1_message_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_v1_message_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
