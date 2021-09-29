@@ -246,9 +246,6 @@ func validate(b Bid) error {
 	if err := b.AuctioneerID.Validate(); err != nil {
 		return fmt.Errorf("auctioneer id is not a valid peer id: %v", err)
 	}
-	if err := b.Sources.Validate(); err != nil {
-		return err
-	}
 	if b.DealSize == 0 {
 		return errors.New("deal size must be greater than zero")
 	}
@@ -311,7 +308,7 @@ func getBid(reader ds.Read, id auction.BidID) (*Bid, error) {
 
 // SetAwaitingProposalCid updates bid status to BidStatusAwaitingProposal.
 // If a bid is not found for id, ErrBidNotFound is returned.
-func (s *Store) SetAwaitingProposalCid(id auction.BidID) error {
+func (s *Store) SetAwaitingProposalCid(id auction.BidID, sources auction.Sources) error {
 	txn, err := s.store.NewTransaction(false)
 	if err != nil {
 		return fmt.Errorf("creating txn: %v", err)
@@ -329,6 +326,7 @@ func (s *Store) SetAwaitingProposalCid(id auction.BidID) error {
 	if b.Status != BidStatusSubmitted {
 		return fmt.Errorf("expect bid to have status '%s', got '%s'", BidStatusSubmitted, b.Status)
 	}
+	b.Sources = sources
 	if err := s.saveAndTransitionStatus(txn, b, BidStatusAwaitingProposal); err != nil {
 		return fmt.Errorf("updating bid: %v", err)
 	}

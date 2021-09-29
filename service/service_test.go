@@ -25,6 +25,7 @@ import (
 	lotusclientmocks "github.com/textileio/bidbot/mocks/service/lotusclient"
 	"github.com/textileio/bidbot/service"
 	"github.com/textileio/bidbot/service/limiter"
+	tcrypto "github.com/textileio/crypto"
 	rpc "github.com/textileio/go-libp2p-pubsub-rpc"
 	rpcpeer "github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
@@ -128,8 +129,13 @@ func TestBytesLimit(t *testing.T) {
 
 	limitPeriod := 5 * time.Second
 	limitBytes := uint64(80000)
+	var encryptKey tcrypto.EncryptionKey
 	s, err := newService(t, func(config *service.Config) {
 		config.BytesLimiter = limiter.NewRunningTotalLimiter(limitBytes, limitPeriod)
+		pubKey, err := crypto.MarshalPublicKey(config.Peer.PrivKey.GetPublic())
+		require.NoError(t, err)
+		encryptKey, err = tcrypto.EncryptionKeyFromBytes(pubKey)
+		require.NoError(t, err)
 	})
 	require.NoError(t, err)
 	require.NoError(t, s.Subscribe(true))
@@ -147,7 +153,6 @@ func TestBytesLimit(t *testing.T) {
 			DealSize:         limitBytes * 4 / 5,
 			DealDuration:     core.MinDealDuration,
 			FilEpochDeadline: 3000,
-			Sources:          cast.SourcesToPb(sources),
 			EndsAt:           timestamppb.New(time.Now().Add(time.Minute)),
 		}
 
@@ -169,9 +174,14 @@ func TestBytesLimit(t *testing.T) {
 					wins, _ = mockAuctioneer.NewTopic(ctx, core.WinsTopic(from), false)
 					proposals, _ = mockAuctioneer.NewTopic(ctx, core.ProposalsTopic(from), false)
 				})
+				sourcesPb, err := proto.Marshal(cast.SourcesToPb(sources))
+				require.NoError(t, err)
+				encryptedSources, err := encryptKey.Encrypt(sourcesPb)
+				require.NoError(t, err)
 				msg, err := proto.Marshal(&pb.WinningBid{
-					AuctionId: pbid.AuctionId,
-					BidId:     bidID,
+					AuctionId:        pbid.AuctionId,
+					BidId:            bidID,
+					EncryptedSources: encryptedSources,
 				})
 				require.NoError(t, err)
 				resp, err := wins.Publish(ctx, msg)
