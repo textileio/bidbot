@@ -136,7 +136,8 @@ func init() {
 		{
 			Name:     "running-bytes-limit",
 			DefValue: "",
-			Description: `Maximum running total bytes in the deals to bid for a period of time.
+			Description: `Maximum running total bytes to process for a period of time.
+bidbot rejects new auctions if the limit would be exceeded.
 In the form of '10MiB/1m', '500 tb/24h' or '5 PiB / 128h', etc.
 See https://en.wikipedia.org/wiki/Byte#Multiple-byte_units for valid byte units.
 Default to no limit. Be aware that the bytes counter resets when bidbot restarts.
