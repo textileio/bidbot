@@ -67,7 +67,7 @@ The Auctioneer collects all bids from connected storage providers and chooses on
 
 If you win an auction, you will be notified about it! If that weren't the case, most probably you'll have better luck in the next auction!
 
-The Auctioneer relies on offline deals to make deals with storage providers. After you win an auction, you will pull the deal data from the place given to your bidbot. You can think of this flow as an *automatic* offline deal setup where instead of receiving hard drives, you'll pull the data from someplace and then receive the offline-deal proposal.
+The Auctioneer relies on offline deals to make deals with storage providers. After you win an auction, your bidbot will pull the deal data from the client. You can think of this flow as an *automatic* offline deal setup where instead of receiving hard drives, you'll pull the data from someplace and then receive the offline-deal proposal.
 
 # How do I connect with the system?
 
@@ -79,7 +79,7 @@ To connect to the system, you will install `bidbot`, a daemon that you run on yo
 
 The `bidbot` talks to the Auctioneer through libp2p pubsub topics. This is the same technology used by many `libp2p` applications such as `lotus`. Through these topics, your `bidbot` daemon will receive new *auctions* and can send *bids* to participate.
 
-Whenever you win an auction, your `lotus-miner` will receive the deal proposal for the corresponding data so you can accept it, and a *ProposalCid* is generated. After acceptance, your `bidbot` will automatically download the *PayloadCid* data from the URL or IPFS multiaddrs given, and import it as you generally do with offline deals, simulating the following commands you might be aware of: `lotus-miner storage-deals import-data <dealCid> <carFilePath>`
+Whenever you win an auction, your `lotus-miner` will receive the deal proposal for the corresponding data so you can accept it, and a *ProposalCid* is generated. After acceptance, your `bidbot` will automatically download the *PayloadCid* data via the URL or IPFS multiaddrs given by the client, and import it as you generally do with offline deals, simulating the following commands you might be aware of: `lotus-miner storage-deals import-data <dealCid> <carFilePath>`
 
 The `carFilePath` is the CAR file that `bidbot` generated after downloading the deals data. The *dealCid* is the *ProposalCid* of the proposal you previously accepted from the Auctioneer.
 
