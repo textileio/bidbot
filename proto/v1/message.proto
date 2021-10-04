@@ -54,3 +54,48 @@ message Sources {
     repeated string multiaddrs = 2;
   }
 }
+
+
+message BidBotEvent {
+  google.protobuf.Timestamp ts = 1;
+  oneof type {
+    StartUp start_up = 2;
+    StartFetching start_fetching = 3;
+    ErrorFetching error_fetching = 4;
+    StartImporting start_importing = 5;
+    EndImporting end_importing = 6;
+    Finalized finalized = 7;
+    Errored errored = 8;
+  }
+  message StartUp {
+    string semantic_version = 1;
+    string storage_provider_id = 2;
+    uint64 deal_start_window = 3;
+    bool cid_gravity_configured = 4;
+  };
+  message StartFetching {
+    string bid_id = 1;
+    uint32 attempts = 2;
+  };
+  message ErrorFetching {
+    string bid_id = 1;
+    uint32 attempts = 2;
+    string error = 3;
+  };
+  message StartImporting {
+    string bid_id = 1;
+    uint32 attempts = 2;
+  };
+  message EndImporting {
+    string bid_id = 1;
+    uint32 attempts = 2;
+    string error = 3;
+  };
+  message Finalized {
+    string bid_id = 1;
+  };
+  message Errored {
+    string bid_id = 1;
+    string error_cause = 2;
+  };
+}
