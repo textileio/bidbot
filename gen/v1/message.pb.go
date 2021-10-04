@@ -447,6 +447,164 @@ func (x *Sources) GetCarIpfs() *Sources_CARIPFS {
 	return nil
 }
 
+type BidBotEvent struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ts *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=ts,proto3" json:"ts,omitempty"`
+	// Types that are assignable to Type:
+	//	*BidBotEvent_StartUp_
+	//	*BidBotEvent_StartFetching_
+	//	*BidBotEvent_ErrorFetching_
+	//	*BidBotEvent_StartImporting_
+	//	*BidBotEvent_EndImporting_
+	//	*BidBotEvent_Finalized_
+	//	*BidBotEvent_Errored_
+	Type isBidBotEvent_Type `protobuf_oneof:"type"`
+}
+
+func (x *BidBotEvent) Reset() {
+	*x = BidBotEvent{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent) ProtoMessage() {}
+
+func (x *BidBotEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent.ProtoReflect.Descriptor instead.
+func (*BidBotEvent) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *BidBotEvent) GetTs() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Ts
+	}
+	return nil
+}
+
+func (m *BidBotEvent) GetType() isBidBotEvent_Type {
+	if m != nil {
+		return m.Type
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetStartUp() *BidBotEvent_StartUp {
+	if x, ok := x.GetType().(*BidBotEvent_StartUp_); ok {
+		return x.StartUp
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetStartFetching() *BidBotEvent_StartFetching {
+	if x, ok := x.GetType().(*BidBotEvent_StartFetching_); ok {
+		return x.StartFetching
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetErrorFetching() *BidBotEvent_ErrorFetching {
+	if x, ok := x.GetType().(*BidBotEvent_ErrorFetching_); ok {
+		return x.ErrorFetching
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetStartImporting() *BidBotEvent_StartImporting {
+	if x, ok := x.GetType().(*BidBotEvent_StartImporting_); ok {
+		return x.StartImporting
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetEndImporting() *BidBotEvent_EndImporting {
+	if x, ok := x.GetType().(*BidBotEvent_EndImporting_); ok {
+		return x.EndImporting
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetFinalized() *BidBotEvent_Finalized {
+	if x, ok := x.GetType().(*BidBotEvent_Finalized_); ok {
+		return x.Finalized
+	}
+	return nil
+}
+
+func (x *BidBotEvent) GetErrored() *BidBotEvent_Errored {
+	if x, ok := x.GetType().(*BidBotEvent_Errored_); ok {
+		return x.Errored
+	}
+	return nil
+}
+
+type isBidBotEvent_Type interface {
+	isBidBotEvent_Type()
+}
+
+type BidBotEvent_StartUp_ struct {
+	StartUp *BidBotEvent_StartUp `protobuf:"bytes,2,opt,name=start_up,json=startUp,proto3,oneof"`
+}
+
+type BidBotEvent_StartFetching_ struct {
+	StartFetching *BidBotEvent_StartFetching `protobuf:"bytes,3,opt,name=start_fetching,json=startFetching,proto3,oneof"`
+}
+
+type BidBotEvent_ErrorFetching_ struct {
+	ErrorFetching *BidBotEvent_ErrorFetching `protobuf:"bytes,4,opt,name=error_fetching,json=errorFetching,proto3,oneof"`
+}
+
+type BidBotEvent_StartImporting_ struct {
+	StartImporting *BidBotEvent_StartImporting `protobuf:"bytes,5,opt,name=start_importing,json=startImporting,proto3,oneof"`
+}
+
+type BidBotEvent_EndImporting_ struct {
+	EndImporting *BidBotEvent_EndImporting `protobuf:"bytes,6,opt,name=end_importing,json=endImporting,proto3,oneof"`
+}
+
+type BidBotEvent_Finalized_ struct {
+	Finalized *BidBotEvent_Finalized `protobuf:"bytes,7,opt,name=finalized,proto3,oneof"`
+}
+
+type BidBotEvent_Errored_ struct {
+	Errored *BidBotEvent_Errored `protobuf:"bytes,8,opt,name=errored,proto3,oneof"`
+}
+
+func (*BidBotEvent_StartUp_) isBidBotEvent_Type() {}
+
+func (*BidBotEvent_StartFetching_) isBidBotEvent_Type() {}
+
+func (*BidBotEvent_ErrorFetching_) isBidBotEvent_Type() {}
+
+func (*BidBotEvent_StartImporting_) isBidBotEvent_Type() {}
+
+func (*BidBotEvent_EndImporting_) isBidBotEvent_Type() {}
+
+func (*BidBotEvent_Finalized_) isBidBotEvent_Type() {}
+
+func (*BidBotEvent_Errored_) isBidBotEvent_Type() {}
+
 type Sources_CARURL struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -458,7 +616,7 @@ type Sources_CARURL struct {
 func (x *Sources_CARURL) Reset() {
 	*x = Sources_CARURL{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1_message_proto_msgTypes[6]
+		mi := &file_v1_message_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -471,7 +629,7 @@ func (x *Sources_CARURL) String() string {
 func (*Sources_CARURL) ProtoMessage() {}
 
 func (x *Sources_CARURL) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_message_proto_msgTypes[6]
+	mi := &file_v1_message_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -506,7 +664,7 @@ type Sources_CARIPFS struct {
 func (x *Sources_CARIPFS) Reset() {
 	*x = Sources_CARIPFS{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1_message_proto_msgTypes[7]
+		mi := &file_v1_message_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -519,7 +677,7 @@ func (x *Sources_CARIPFS) String() string {
 func (*Sources_CARIPFS) ProtoMessage() {}
 
 func (x *Sources_CARIPFS) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_message_proto_msgTypes[7]
+	mi := &file_v1_message_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -547,6 +705,415 @@ func (x *Sources_CARIPFS) GetMultiaddrs() []string {
 		return x.Multiaddrs
 	}
 	return nil
+}
+
+type BidBotEvent_StartUp struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	SemanticVersion      string `protobuf:"bytes,1,opt,name=semantic_version,json=semanticVersion,proto3" json:"semantic_version,omitempty"`
+	StorageProviderId    string `protobuf:"bytes,2,opt,name=storage_provider_id,json=storageProviderId,proto3" json:"storage_provider_id,omitempty"`
+	DealStartWindow      uint64 `protobuf:"varint,3,opt,name=deal_start_window,json=dealStartWindow,proto3" json:"deal_start_window,omitempty"`
+	CidGravityConfigured bool   `protobuf:"varint,4,opt,name=cid_gravity_configured,json=cidGravityConfigured,proto3" json:"cid_gravity_configured,omitempty"`
+}
+
+func (x *BidBotEvent_StartUp) Reset() {
+	*x = BidBotEvent_StartUp{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_StartUp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_StartUp) ProtoMessage() {}
+
+func (x *BidBotEvent_StartUp) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_StartUp.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_StartUp) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 0}
+}
+
+func (x *BidBotEvent_StartUp) GetSemanticVersion() string {
+	if x != nil {
+		return x.SemanticVersion
+	}
+	return ""
+}
+
+func (x *BidBotEvent_StartUp) GetStorageProviderId() string {
+	if x != nil {
+		return x.StorageProviderId
+	}
+	return ""
+}
+
+func (x *BidBotEvent_StartUp) GetDealStartWindow() uint64 {
+	if x != nil {
+		return x.DealStartWindow
+	}
+	return 0
+}
+
+func (x *BidBotEvent_StartUp) GetCidGravityConfigured() bool {
+	if x != nil {
+		return x.CidGravityConfigured
+	}
+	return false
+}
+
+type BidBotEvent_StartFetching struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BidId    string `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	Attempts uint32 `protobuf:"varint,2,opt,name=attempts,proto3" json:"attempts,omitempty"`
+}
+
+func (x *BidBotEvent_StartFetching) Reset() {
+	*x = BidBotEvent_StartFetching{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_StartFetching) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_StartFetching) ProtoMessage() {}
+
+func (x *BidBotEvent_StartFetching) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_StartFetching.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_StartFetching) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 1}
+}
+
+func (x *BidBotEvent_StartFetching) GetBidId() string {
+	if x != nil {
+		return x.BidId
+	}
+	return ""
+}
+
+func (x *BidBotEvent_StartFetching) GetAttempts() uint32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+type BidBotEvent_ErrorFetching struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BidId    string `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	Attempts uint32 `protobuf:"varint,2,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	Error    string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+}
+
+func (x *BidBotEvent_ErrorFetching) Reset() {
+	*x = BidBotEvent_ErrorFetching{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_ErrorFetching) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_ErrorFetching) ProtoMessage() {}
+
+func (x *BidBotEvent_ErrorFetching) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_ErrorFetching.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_ErrorFetching) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 2}
+}
+
+func (x *BidBotEvent_ErrorFetching) GetBidId() string {
+	if x != nil {
+		return x.BidId
+	}
+	return ""
+}
+
+func (x *BidBotEvent_ErrorFetching) GetAttempts() uint32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *BidBotEvent_ErrorFetching) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type BidBotEvent_StartImporting struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BidId    string `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	Attempts uint32 `protobuf:"varint,2,opt,name=attempts,proto3" json:"attempts,omitempty"`
+}
+
+func (x *BidBotEvent_StartImporting) Reset() {
+	*x = BidBotEvent_StartImporting{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_StartImporting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_StartImporting) ProtoMessage() {}
+
+func (x *BidBotEvent_StartImporting) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_StartImporting.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_StartImporting) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 3}
+}
+
+func (x *BidBotEvent_StartImporting) GetBidId() string {
+	if x != nil {
+		return x.BidId
+	}
+	return ""
+}
+
+func (x *BidBotEvent_StartImporting) GetAttempts() uint32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+type BidBotEvent_EndImporting struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BidId    string `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	Attempts uint32 `protobuf:"varint,2,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	Error    string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+}
+
+func (x *BidBotEvent_EndImporting) Reset() {
+	*x = BidBotEvent_EndImporting{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_EndImporting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_EndImporting) ProtoMessage() {}
+
+func (x *BidBotEvent_EndImporting) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_EndImporting.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_EndImporting) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 4}
+}
+
+func (x *BidBotEvent_EndImporting) GetBidId() string {
+	if x != nil {
+		return x.BidId
+	}
+	return ""
+}
+
+func (x *BidBotEvent_EndImporting) GetAttempts() uint32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *BidBotEvent_EndImporting) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type BidBotEvent_Finalized struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BidId string `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+}
+
+func (x *BidBotEvent_Finalized) Reset() {
+	*x = BidBotEvent_Finalized{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_Finalized) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_Finalized) ProtoMessage() {}
+
+func (x *BidBotEvent_Finalized) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_Finalized.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_Finalized) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 5}
+}
+
+func (x *BidBotEvent_Finalized) GetBidId() string {
+	if x != nil {
+		return x.BidId
+	}
+	return ""
+}
+
+type BidBotEvent_Errored struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BidId      string `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	ErrorCause string `protobuf:"bytes,2,opt,name=error_cause,json=errorCause,proto3" json:"error_cause,omitempty"`
+}
+
+func (x *BidBotEvent_Errored) Reset() {
+	*x = BidBotEvent_Errored{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1_message_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BidBotEvent_Errored) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BidBotEvent_Errored) ProtoMessage() {}
+
+func (x *BidBotEvent_Errored) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_message_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BidBotEvent_Errored.ProtoReflect.Descriptor instead.
+func (*BidBotEvent_Errored) Descriptor() ([]byte, []int) {
+	return file_v1_message_proto_rawDescGZIP(), []int{6, 6}
+}
+
+func (x *BidBotEvent_Errored) GetBidId() string {
+	if x != nil {
+		return x.BidId
+	}
+	return ""
+}
+
+func (x *BidBotEvent_Errored) GetErrorCause() string {
+	if x != nil {
+		return x.ErrorCause
+	}
+	return ""
 }
 
 var File_v1_message_proto protoreflect.FileDescriptor
@@ -625,10 +1192,88 @@ var file_v1_message_proto_rawDesc = []byte{
 	0x53, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
 	0x63, 0x69, 0x64, 0x12, 0x1e, 0x0a, 0x0a, 0x6d, 0x75, 0x6c, 0x74, 0x69, 0x61, 0x64, 0x64, 0x72,
 	0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0a, 0x6d, 0x75, 0x6c, 0x74, 0x69, 0x61, 0x64,
-	0x64, 0x72, 0x73, 0x42, 0x2c, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x74, 0x65, 0x78, 0x74, 0x69, 0x6c, 0x65, 0x69, 0x6f, 0x2f, 0x62, 0x69, 0x64, 0x62,
-	0x6f, 0x74, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x76, 0x31, 0x3b, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
-	0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x64, 0x72, 0x73, 0x22, 0xd5, 0x09, 0x0a, 0x0b, 0x42, 0x69, 0x64, 0x42, 0x6f, 0x74, 0x45, 0x76,
+	0x65, 0x6e, 0x74, 0x12, 0x2a, 0x0a, 0x02, 0x74, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
+	0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x02, 0x74, 0x73, 0x12,
+	0x42, 0x0a, 0x08, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x75, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x25, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65, 0x73,
+	0x73, 0x61, 0x67, 0x65, 0x2e, 0x42, 0x69, 0x64, 0x42, 0x6f, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74,
+	0x2e, 0x53, 0x74, 0x61, 0x72, 0x74, 0x55, 0x70, 0x48, 0x00, 0x52, 0x07, 0x73, 0x74, 0x61, 0x72,
+	0x74, 0x55, 0x70, 0x12, 0x54, 0x0a, 0x0e, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x66, 0x65, 0x74,
+	0x63, 0x68, 0x69, 0x6e, 0x67, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2b, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x2e, 0x42,
+	0x69, 0x64, 0x42, 0x6f, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x72, 0x74,
+	0x46, 0x65, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x48, 0x00, 0x52, 0x0d, 0x73, 0x74, 0x61, 0x72,
+	0x74, 0x46, 0x65, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x12, 0x54, 0x0a, 0x0e, 0x65, 0x72, 0x72,
+	0x6f, 0x72, 0x5f, 0x66, 0x65, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x2b, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65, 0x73,
+	0x73, 0x61, 0x67, 0x65, 0x2e, 0x42, 0x69, 0x64, 0x42, 0x6f, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74,
+	0x2e, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x46, 0x65, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x48, 0x00,
+	0x52, 0x0d, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x46, 0x65, 0x74, 0x63, 0x68, 0x69, 0x6e, 0x67, 0x12,
+	0x57, 0x0a, 0x0f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x69,
+	0x6e, 0x67, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x2e, 0x42, 0x69, 0x64, 0x42,
+	0x6f, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x72, 0x74, 0x49, 0x6d, 0x70,
+	0x6f, 0x72, 0x74, 0x69, 0x6e, 0x67, 0x48, 0x00, 0x52, 0x0e, 0x73, 0x74, 0x61, 0x72, 0x74, 0x49,
+	0x6d, 0x70, 0x6f, 0x72, 0x74, 0x69, 0x6e, 0x67, 0x12, 0x51, 0x0a, 0x0d, 0x65, 0x6e, 0x64, 0x5f,
+	0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x69, 0x6e, 0x67, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x2a, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x2e, 0x42, 0x69, 0x64, 0x42, 0x6f, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x2e, 0x45,
+	0x6e, 0x64, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x69, 0x6e, 0x67, 0x48, 0x00, 0x52, 0x0c, 0x65,
+	0x6e, 0x64, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x69, 0x6e, 0x67, 0x12, 0x47, 0x0a, 0x09, 0x66,
+	0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x2e, 0x42, 0x69, 0x64, 0x42, 0x6f, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x2e, 0x46, 0x69,
+	0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x48, 0x00, 0x52, 0x09, 0x66, 0x69, 0x6e, 0x61, 0x6c,
+	0x69, 0x7a, 0x65, 0x64, 0x12, 0x41, 0x0a, 0x07, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x65, 0x64, 0x18,
+	0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x76, 0x31,
+	0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x2e, 0x42, 0x69, 0x64, 0x42, 0x6f, 0x74, 0x45,
+	0x76, 0x65, 0x6e, 0x74, 0x2e, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x65, 0x64, 0x48, 0x00, 0x52, 0x07,
+	0x65, 0x72, 0x72, 0x6f, 0x72, 0x65, 0x64, 0x1a, 0xc6, 0x01, 0x0a, 0x07, 0x53, 0x74, 0x61, 0x72,
+	0x74, 0x55, 0x70, 0x12, 0x29, 0x0a, 0x10, 0x73, 0x65, 0x6d, 0x61, 0x6e, 0x74, 0x69, 0x63, 0x5f,
+	0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x73,
+	0x65, 0x6d, 0x61, 0x6e, 0x74, 0x69, 0x63, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x2e,
+	0x0a, 0x13, 0x73, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
+	0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x11, 0x73, 0x74, 0x6f,
+	0x72, 0x61, 0x67, 0x65, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x49, 0x64, 0x12, 0x2a,
+	0x0a, 0x11, 0x64, 0x65, 0x61, 0x6c, 0x5f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x5f, 0x77, 0x69, 0x6e,
+	0x64, 0x6f, 0x77, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0f, 0x64, 0x65, 0x61, 0x6c, 0x53,
+	0x74, 0x61, 0x72, 0x74, 0x57, 0x69, 0x6e, 0x64, 0x6f, 0x77, 0x12, 0x34, 0x0a, 0x16, 0x63, 0x69,
+	0x64, 0x5f, 0x67, 0x72, 0x61, 0x76, 0x69, 0x74, 0x79, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x75, 0x72, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x14, 0x63, 0x69, 0x64, 0x47,
+	0x72, 0x61, 0x76, 0x69, 0x74, 0x79, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x65, 0x64,
+	0x1a, 0x42, 0x0a, 0x0d, 0x53, 0x74, 0x61, 0x72, 0x74, 0x46, 0x65, 0x74, 0x63, 0x68, 0x69, 0x6e,
+	0x67, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x69, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x61, 0x74, 0x74, 0x65,
+	0x6d, 0x70, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x61, 0x74, 0x74, 0x65,
+	0x6d, 0x70, 0x74, 0x73, 0x1a, 0x58, 0x0a, 0x0d, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x46, 0x65, 0x74,
+	0x63, 0x68, 0x69, 0x6e, 0x67, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x69, 0x64, 0x5f, 0x69, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08,
+	0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08,
+	0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f,
+	0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x1a, 0x43,
+	0x0a, 0x0e, 0x53, 0x74, 0x61, 0x72, 0x74, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x69, 0x6e, 0x67,
+	0x12, 0x15, 0x0a, 0x06, 0x62, 0x69, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x61, 0x74, 0x74, 0x65, 0x6d,
+	0x70, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x61, 0x74, 0x74, 0x65, 0x6d,
+	0x70, 0x74, 0x73, 0x1a, 0x57, 0x0a, 0x0c, 0x45, 0x6e, 0x64, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74,
+	0x69, 0x6e, 0x67, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x69, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x61, 0x74,
+	0x74, 0x65, 0x6d, 0x70, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x61, 0x74,
+	0x74, 0x65, 0x6d, 0x70, 0x74, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x1a, 0x22, 0x0a, 0x09,
+	0x46, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x69, 0x64,
+	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x62, 0x69, 0x64, 0x49, 0x64,
+	0x1a, 0x41, 0x0a, 0x07, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x65, 0x64, 0x12, 0x15, 0x0a, 0x06, 0x62,
+	0x69, 0x64, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x62, 0x69, 0x64,
+	0x49, 0x64, 0x12, 0x1f, 0x0a, 0x0b, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x5f, 0x63, 0x61, 0x75, 0x73,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x43, 0x61,
+	0x75, 0x73, 0x65, 0x42, 0x06, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x42, 0x2c, 0x5a, 0x2a, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x65, 0x78, 0x74, 0x69, 0x6c,
+	0x65, 0x69, 0x6f, 0x2f, 0x62, 0x69, 0x64, 0x62, 0x6f, 0x74, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x76,
+	0x31, 0x3b, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -643,29 +1288,45 @@ func file_v1_message_proto_rawDescGZIP() []byte {
 	return file_v1_message_proto_rawDescData
 }
 
-var file_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_v1_message_proto_goTypes = []interface{}{
-	(*Auction)(nil),                // 0: proto.v1.message.Auction
-	(*Bid)(nil),                    // 1: proto.v1.message.Bid
-	(*WinningBid)(nil),             // 2: proto.v1.message.WinningBid
-	(*WinningBidConfidential)(nil), // 3: proto.v1.message.WinningBidConfidential
-	(*WinningBidProposal)(nil),     // 4: proto.v1.message.WinningBidProposal
-	(*Sources)(nil),                // 5: proto.v1.message.Sources
-	(*Sources_CARURL)(nil),         // 6: proto.v1.message.Sources.CARURL
-	(*Sources_CARIPFS)(nil),        // 7: proto.v1.message.Sources.CARIPFS
-	(*timestamppb.Timestamp)(nil),  // 8: google.protobuf.Timestamp
+	(*Auction)(nil),                    // 0: proto.v1.message.Auction
+	(*Bid)(nil),                        // 1: proto.v1.message.Bid
+	(*WinningBid)(nil),                 // 2: proto.v1.message.WinningBid
+	(*WinningBidConfidential)(nil),     // 3: proto.v1.message.WinningBidConfidential
+	(*WinningBidProposal)(nil),         // 4: proto.v1.message.WinningBidProposal
+	(*Sources)(nil),                    // 5: proto.v1.message.Sources
+	(*BidBotEvent)(nil),                // 6: proto.v1.message.BidBotEvent
+	(*Sources_CARURL)(nil),             // 7: proto.v1.message.Sources.CARURL
+	(*Sources_CARIPFS)(nil),            // 8: proto.v1.message.Sources.CARIPFS
+	(*BidBotEvent_StartUp)(nil),        // 9: proto.v1.message.BidBotEvent.StartUp
+	(*BidBotEvent_StartFetching)(nil),  // 10: proto.v1.message.BidBotEvent.StartFetching
+	(*BidBotEvent_ErrorFetching)(nil),  // 11: proto.v1.message.BidBotEvent.ErrorFetching
+	(*BidBotEvent_StartImporting)(nil), // 12: proto.v1.message.BidBotEvent.StartImporting
+	(*BidBotEvent_EndImporting)(nil),   // 13: proto.v1.message.BidBotEvent.EndImporting
+	(*BidBotEvent_Finalized)(nil),      // 14: proto.v1.message.BidBotEvent.Finalized
+	(*BidBotEvent_Errored)(nil),        // 15: proto.v1.message.BidBotEvent.Errored
+	(*timestamppb.Timestamp)(nil),      // 16: google.protobuf.Timestamp
 }
 var file_v1_message_proto_depIdxs = []int32{
-	5, // 0: proto.v1.message.Auction.sources:type_name -> proto.v1.message.Sources
-	8, // 1: proto.v1.message.Auction.ends_at:type_name -> google.protobuf.Timestamp
-	5, // 2: proto.v1.message.WinningBidConfidential.sources:type_name -> proto.v1.message.Sources
-	6, // 3: proto.v1.message.Sources.car_url:type_name -> proto.v1.message.Sources.CARURL
-	7, // 4: proto.v1.message.Sources.car_ipfs:type_name -> proto.v1.message.Sources.CARIPFS
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	5,  // 0: proto.v1.message.Auction.sources:type_name -> proto.v1.message.Sources
+	16, // 1: proto.v1.message.Auction.ends_at:type_name -> google.protobuf.Timestamp
+	5,  // 2: proto.v1.message.WinningBidConfidential.sources:type_name -> proto.v1.message.Sources
+	7,  // 3: proto.v1.message.Sources.car_url:type_name -> proto.v1.message.Sources.CARURL
+	8,  // 4: proto.v1.message.Sources.car_ipfs:type_name -> proto.v1.message.Sources.CARIPFS
+	16, // 5: proto.v1.message.BidBotEvent.ts:type_name -> google.protobuf.Timestamp
+	9,  // 6: proto.v1.message.BidBotEvent.start_up:type_name -> proto.v1.message.BidBotEvent.StartUp
+	10, // 7: proto.v1.message.BidBotEvent.start_fetching:type_name -> proto.v1.message.BidBotEvent.StartFetching
+	11, // 8: proto.v1.message.BidBotEvent.error_fetching:type_name -> proto.v1.message.BidBotEvent.ErrorFetching
+	12, // 9: proto.v1.message.BidBotEvent.start_importing:type_name -> proto.v1.message.BidBotEvent.StartImporting
+	13, // 10: proto.v1.message.BidBotEvent.end_importing:type_name -> proto.v1.message.BidBotEvent.EndImporting
+	14, // 11: proto.v1.message.BidBotEvent.finalized:type_name -> proto.v1.message.BidBotEvent.Finalized
+	15, // 12: proto.v1.message.BidBotEvent.errored:type_name -> proto.v1.message.BidBotEvent.Errored
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_v1_message_proto_init() }
@@ -747,7 +1408,7 @@ func file_v1_message_proto_init() {
 			}
 		}
 		file_v1_message_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Sources_CARURL); i {
+			switch v := v.(*BidBotEvent); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -759,6 +1420,18 @@ func file_v1_message_proto_init() {
 			}
 		}
 		file_v1_message_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Sources_CARURL); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Sources_CARIPFS); i {
 			case 0:
 				return &v.state
@@ -770,6 +1443,99 @@ func file_v1_message_proto_init() {
 				return nil
 			}
 		}
+		file_v1_message_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_StartUp); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_StartFetching); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_ErrorFetching); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_StartImporting); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_EndImporting); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_Finalized); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1_message_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BidBotEvent_Errored); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
+	file_v1_message_proto_msgTypes[6].OneofWrappers = []interface{}{
+		(*BidBotEvent_StartUp_)(nil),
+		(*BidBotEvent_StartFetching_)(nil),
+		(*BidBotEvent_ErrorFetching_)(nil),
+		(*BidBotEvent_StartImporting_)(nil),
+		(*BidBotEvent_EndImporting_)(nil),
+		(*BidBotEvent_Finalized_)(nil),
+		(*BidBotEvent_Errored_)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -777,7 +1543,7 @@ func file_v1_message_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_v1_message_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
