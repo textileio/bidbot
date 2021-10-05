@@ -17,8 +17,6 @@ import (
 	"github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
-	format "github.com/ipfs/go-ipld-format"
-	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/oklog/ulid/v2"
 	"github.com/textileio/bidbot/lib/auction"
@@ -64,6 +62,25 @@ var (
 	// Structure: /data_fetching/<bid_id> -> nil.
 	dsFetchingPrefix = ds.NewKey("/data_fetching")
 )
+
+// ProgressReporter reports the progress processing a deal.
+type ProgressReporter interface {
+	StartFetching(bidID auction.BidID, attempts uint32)
+	ErrorFetching(bidID auction.BidID, attempts uint32, err error)
+	StartImporting(bidID auction.BidID, attempts uint32)
+	EndImporting(bidID auction.BidID, attempts uint32, err error)
+	Finalized(bidID auction.BidID)
+	Errored(bidID auction.BidID, errrorCause string)
+}
+
+type nullProgressReporter struct{}
+
+func (pr nullProgressReporter) StartFetching(bidID auction.BidID, attempts uint32)            {}
+func (pr nullProgressReporter) ErrorFetching(bidID auction.BidID, attempts uint32, err error) {}
+func (pr nullProgressReporter) StartImporting(bidID auction.BidID, attempts uint32)           {}
+func (pr nullProgressReporter) EndImporting(bidID auction.BidID, attempts uint32, err error)  {}
+func (pr nullProgressReporter) Finalized(bidID auction.BidID)                                 {}
+func (pr nullProgressReporter) Errored(bidID auction.BidID, errorCause string)                {}
 
 // Bid defines the core bid model from a miner's perspective.
 type Bid struct {
@@ -145,8 +162,6 @@ func BidStatusByString(s string) (BidStatus, error) {
 // Store stores miner auction deal bids.
 type Store struct {
 	store        txndswrap.TxnDatastore
-	host         host.Host
-	nodeGetter   format.NodeGetter
 	lc           lotusclient.LotusClient
 	bytesLimiter limiter.Limiter
 
@@ -156,6 +171,7 @@ type Store struct {
 	dealDataDirectory     string
 	dealDataFetchAttempts uint32
 	dealDataFetchTimeout  time.Duration
+	dealProgressReporter  ProgressReporter
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -167,12 +183,11 @@ type Store struct {
 // NewStore returns a new Store.
 func NewStore(
 	store txndswrap.TxnDatastore,
-	host host.Host,
-	nodeGetter format.NodeGetter,
 	lc lotusclient.LotusClient,
 	dealDataDirectory string,
 	dealDataFetchAttempts uint32,
 	dealDataFetchTimeout time.Duration,
+	dealProgressReporter ProgressReporter,
 	discardOrphanDealsAfter time.Duration,
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
@@ -180,8 +195,6 @@ func NewStore(
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
 		store:                 store,
-		host:                  host,
-		nodeGetter:            nodeGetter,
 		lc:                    lc,
 		bytesLimiter:          bytesLimiter,
 		jobCh:                 make(chan *Bid, MaxDataURIFetchConcurrency),
@@ -189,11 +202,15 @@ func NewStore(
 		dealDataDirectory:     dealDataDirectory,
 		dealDataFetchAttempts: dealDataFetchAttempts,
 		dealDataFetchTimeout:  dealDataFetchTimeout,
+		dealProgressReporter:  dealProgressReporter,
 		ctx:                   ctx,
 		cancel:                cancel,
 	}
 	if concurrentImports > 0 {
 		s.semImports = semaphore.NewWeighted(int64(concurrentImports))
+	}
+	if s.dealProgressReporter == nil {
+		s.dealProgressReporter = nullProgressReporter{}
 	}
 
 	if err := s.HealthCheck(); err != nil {
@@ -554,6 +571,7 @@ func (s *Store) fetchWorker(num int) {
 		if b.DataURIFetchAttempts >= s.dealDataFetchAttempts {
 			status = BidStatusErrored
 			s.bytesLimiter.Withdraw(string(b.AuctionID))
+			s.dealProgressReporter.Errored(b.ID, b.ErrorCause)
 			log.Warnf("job %s exhausted all %d attempts with error: %v", b.ID, s.dealDataFetchAttempts, err)
 		} else {
 			status = BidStatusQueuedData
@@ -581,8 +599,10 @@ func (s *Store) fetchWorker(num int) {
 				status BidStatus
 				logMsg string
 			)
+			s.dealProgressReporter.StartFetching(b.ID, b.DataURIFetchAttempts)
 			file, err := s.WriteDealData(b)
 			if err != nil {
+				s.dealProgressReporter.ErrorFetching(b.ID, b.DataURIFetchAttempts, err)
 				status = fail(b, err)
 				logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
 			} else {
@@ -595,17 +615,20 @@ func (s *Store) fetchWorker(num int) {
 					// happens.
 					_ = s.semImports.Acquire(context.Background(), 1)
 				}
+				s.dealProgressReporter.StartImporting(b.ID, b.DataURIFetchAttempts)
 				err = s.lc.ImportData(b.ProposalCid, file)
 				if s.semImports != nil {
 					s.semImports.Release(1)
 				}
 
+				s.dealProgressReporter.EndImporting(b.ID, b.DataURIFetchAttempts, err)
 				if err != nil {
 					status = fail(b, err)
 					logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
 				} else {
 					status = BidStatusFinalized
 					s.bytesLimiter.Commit(string(b.AuctionID))
+					s.dealProgressReporter.Finalized(b.ID)
 					// Reset error
 					b.ErrorCause = ""
 					logMsg = fmt.Sprintf("status=%s", status)

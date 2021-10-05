@@ -9,7 +9,7 @@ import (
 // ID is a unique identifier for an Auction.
 type ID string
 
-// Topic is used by brokers to publish and by miners to subscribe to deal auction.
+// Topic is used by auctioneers to publish and by miners to subscribe to deal auction.
 const Topic string = "/textile/auction/0.0.1"
 
 // BidsTopic is used by miners to submit deal auction bids.
@@ -18,14 +18,20 @@ func BidsTopic(auctionID ID) string {
 	return path.Join(Topic, string(auctionID), "bids")
 }
 
-// WinsTopic is used by brokers to notify a bidbot that it has won the deal auction.
+// WinsTopic is used by auctioneers to notify a bidbot that it has won the deal auction.
 // "/textile/auction/0.0.1/<peer_id>/wins".
 func WinsTopic(pid peer.ID) string {
 	return path.Join(Topic, pid.String(), "wins")
 }
 
-// ProposalsTopic is used by brokers to notify a bidbot of the proposal cid.Cid for an accepted deal auction.
+// ProposalsTopic is used by auctioneers to notify a bidbot of the proposal cid.Cid for an accepted deal auction.
 // "/textile/auction/0.0.1/<peer_id>/proposals".
 func ProposalsTopic(pid peer.ID) string {
 	return path.Join(Topic, pid.String(), "proposals")
+}
+
+// BidbotEventsTopic is used by bidbots to notify auctioneers various events, mainly around the lifecycle of bids.
+// "/textile/auction/0.0.1/<peer_id>/bidbot_events".
+func BidbotEventsTopic(pid peer.ID) string {
+	return path.Join(Topic, pid.String(), "bidbot_events")
 }

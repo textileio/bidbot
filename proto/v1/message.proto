@@ -56,23 +56,32 @@ message Sources {
 }
 
 
-message BidBotEvent {
+message BidbotEvent {
   google.protobuf.Timestamp ts = 1;
   oneof type {
-    StartUp start_up = 2;
-    StartFetching start_fetching = 3;
-    ErrorFetching error_fetching = 4;
-    StartImporting start_importing = 5;
-    EndImporting end_importing = 6;
-    Finalized finalized = 7;
-    Errored errored = 8;
+    Startup startup = 2;
+    Unhealthy unhealthy = 3;
+
+    StartFetching start_fetching = 10;
+    ErrorFetching error_fetching = 11;
+    StartImporting start_importing = 12;
+    EndImporting end_importing = 13;
+    Finalized finalized = 14;
+    Errored errored = 15;
   }
-  message StartUp {
+
+  message Startup {
     string semantic_version = 1;
     string storage_provider_id = 2;
     uint64 deal_start_window = 3;
     bool cid_gravity_configured = 4;
+    bool cid_gravity_strict = 5;
   };
+  message Unhealthy {
+    string storage_provider_id = 1;
+    string error = 2;
+  };
+
   message StartFetching {
     string bid_id = 1;
     uint32 attempts = 2;

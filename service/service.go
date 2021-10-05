@@ -31,6 +31,7 @@ import (
 	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
 	golog "github.com/textileio/go-log/v2"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -145,7 +146,7 @@ func (f *MinMaxFilter) Validate() error {
 	return nil
 }
 
-// Service is a miner service that subscribes to brokered deals.
+// Service is a miner service that subscribes to auctions.
 type Service struct {
 	comm       comm.Comm
 	decryptKey tcrypto.DecryptionKey
@@ -181,22 +182,20 @@ func New(
 	ctx, cancel := context.WithCancel(context.Background())
 	fin.Add(finalizer.NewContextCloser(cancel))
 
-	// Create miner peer
-	p, err := peer.New(conf.Peer)
+	comm, err := comm.NewLibp2pPubsub(ctx, conf.Peer)
 	if err != nil {
 		return nil, fin.Cleanupf("creating peer: %v", err)
 	}
-	fin.Add(p)
+	fin.Add(comm)
 
 	// Create bid store
 	s, err := bidstore.NewStore(
 		store,
-		p.Host(),
-		p.DAGService(),
 		lc,
 		conf.BidParams.DealDataDirectory,
 		conf.BidParams.DealDataFetchAttempts,
 		conf.BidParams.DealDataFetchTimeout,
+		progressReporter{comm, ctx},
 		conf.BidParams.DiscardOrphanDealsAfter,
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
@@ -209,7 +208,7 @@ func New(
 	// Verify StorageProvider ID
 	ok, err := fc.VerifyBidder(
 		conf.BidParams.WalletAddrSig,
-		p.Host().ID(),
+		comm.ID(),
 		conf.BidParams.StorageProviderID)
 	if err != nil {
 		return nil, fin.Cleanupf("verifying StorageProvider ID: %v", err)
@@ -228,6 +227,7 @@ func New(
 	}
 
 	srv := &Service{
+		comm:                comm,
 		decryptKey:          decryptKey,
 		fc:                  fc,
 		lc:                  lc,
@@ -257,15 +257,18 @@ func (s *Service) Close() error {
 }
 
 // Subscribe to the deal auction feed.
-// If bootstrap is true, the peer will dial the configured bootstrap addresses
-// before joining the deal auction feed.
+// If bootstrap is true, the peer will dial the configured bootstrap addresses before joining the deal auction feed.
 func (s *Service) Subscribe(bootstrap bool) error {
-	return s.comm.Start(bootstrap)
+	err := s.comm.Subscribe(bootstrap, s)
+	if err == nil {
+		s.reportStartup()
+	}
+	return err
 }
 
 // PeerInfo returns the public information of the market peer.
 func (s *Service) PeerInfo() (*peer.Info, error) {
-	return s.peer.Info()
+	return s.comm.Info()
 }
 
 // ListBids lists bids by applying a store.Query.
@@ -283,26 +286,19 @@ func (s *Service) WriteDataURI(payloadCid, uri string) (string, error) {
 	return s.store.WriteDataURI("", payloadCid, uri, 0)
 }
 
-func (s *Service) auctionsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
-	log.Debugf("%s received auction from %s", topic, from)
-
-	a := &pb.Auction{}
-	if err := proto.Unmarshal(msg, a); err != nil {
-		return nil, fmt.Errorf("unmarshaling message: %v", err)
-	}
-
+// AuctionsHandler implements MessageHandler.
+func (s *Service) AuctionsHandler(from core.ID, a *pb.Auction) error {
 	ajson, err := json.MarshalIndent(a, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshaling json: %v", err)
+		return fmt.Errorf("marshaling json: %v", err)
 	}
-	log.Infof("received auction %s from %s: \n%s", a.Id, from, string(ajson))
-
+	log.Infof("auction details:\n%s", string(ajson))
 	go func() {
 		if err := s.makeBid(a, from); err != nil {
 			log.Errorf("making bid: %v", err)
 		}
 	}()
-	return nil, nil
+	return nil
 }
 
 func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
@@ -365,15 +361,11 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	log.Infof("bidding in auction %s from %s: \n%s", a.Id, from, string(bidj))
 
 	bid.WalletAddrSig = s.bidParams.WalletAddrSig
-	msg, err := proto.Marshal(bid)
-	if err != nil {
-		return fmt.Errorf("marshaling message: %v", err)
-	}
 	// Submit bid to auctioneer
 	ctx2, cancel2 := context.WithTimeout(s.ctx, bidsAckTimeout)
 	defer cancel2()
 
-	id, err := s.comm.NewBid(ctx2, auction.BidsTopic(auction.ID(a.Id)), msg)
+	id, err := s.comm.PublishBid(ctx2, auction.BidsTopic(auction.ID(a.Id)), bid)
 	if err != nil {
 		return fmt.Errorf("sending bid: %v", err)
 	}
@@ -424,82 +416,66 @@ func (s *Service) filterAuction(auction *pb.Auction) (rejectReason string) {
 	return ""
 }
 
-func (s *Service) winsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
-	log.Debugf("%s received win from %s", topic, from)
-
-	wb := &pb.WinningBid{}
-	if err := proto.Unmarshal(msg, wb); err != nil {
-		return nil, fmt.Errorf("unmarshaling message: %v", err)
-	}
-
+// WinsHandler implements MessageHandler.
+func (s *Service) WinsHandler(wb *pb.WinningBid) error {
 	bid, err := s.store.GetBid(auction.BidID(wb.BidId))
 	if err != nil {
-		return nil, fmt.Errorf("getting bid: %v", err)
+		return fmt.Errorf("getting bid: %v", err)
 	}
 	// request for some quota, which may be used or gets expired if not winning
 	// the auction.
 	granted := s.bytesLimiter.Request(wb.AuctionId, bid.DealSize, BidsExpiration)
 	if !granted {
-		return nil, errWouldExceedRunningBytesLimit
+		return errWouldExceedRunningBytesLimit
 	}
 
 	decrypted, err := s.decryptKey.Decrypt(wb.Encrypted)
 	if err != nil {
-		return nil, fmt.Errorf("decrypting sources: %v", err)
+		return fmt.Errorf("decrypting sources: %v", err)
 	}
 	confidential := &pb.WinningBidConfidential{}
 	if err := proto.Unmarshal(decrypted, confidential); err != nil {
-		return nil, fmt.Errorf("unmarshaling sources: %v", err)
+		return fmt.Errorf("unmarshaling sources: %v", err)
 	}
 	sources, err := cast.SourcesFromPb(confidential.Sources)
 	if err != nil {
-		return nil, fmt.Errorf("sources from pb: %v", err)
+		return fmt.Errorf("sources from pb: %v", err)
 	}
 	// Ensure we can fetch the data
 	dataURI, err := datauri.NewFromSources(bid.PayloadCid.String(), sources)
 	if err != nil {
-		return nil, fmt.Errorf("parsing data uri: %v", err)
+		return fmt.Errorf("parsing data uri: %v", err)
 	}
 	ctx, cancel := context.WithTimeout(s.ctx, dataURIValidateTimeout)
 	defer cancel()
 	if err := dataURI.Validate(ctx); err != nil {
-		return nil, fmt.Errorf("validating data uri: %v", err)
+		return fmt.Errorf("validating data uri: %v", err)
 	}
 
 	if err := s.store.SetAwaitingProposalCid(auction.BidID(wb.BidId), sources); err != nil {
-		return nil, fmt.Errorf("setting awaiting proposal cid: %v", err)
+		return fmt.Errorf("setting awaiting proposal cid: %v", err)
 	}
 
 	log.Infof("bid %s won in auction %s; awaiting proposal cid", wb.BidId, wb.AuctionId)
-	return nil, nil
+	return nil
 }
 
-func (s *Service) proposalHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
-	log.Debugf("%s received proposal from %s", topic, from)
-
-	prop := &pb.WinningBidProposal{}
-	if err := proto.Unmarshal(msg, prop); err != nil {
-		log.Errorf("unmarshaling message: %v", err)
-		return nil, fmt.Errorf("unmarshaling message: %v", err)
-	}
-
+// ProposalsHandler implements MessageHandler.
+func (s *Service) ProposalsHandler(prop *pb.WinningBidProposal) error {
 	pcid, err := cid.Decode(prop.ProposalCid)
 	if err != nil {
-		log.Errorf("decoding proposal cid: %v", err)
-		return nil, fmt.Errorf("decoding proposal cid: %v", err)
+		return fmt.Errorf("decoding proposal cid: %v", err)
 	}
 	if err := s.store.SetProposalCid(auction.BidID(prop.BidId), pcid); err != nil {
-		log.Errorf("setting proposal cid: %v", err)
-		return nil, fmt.Errorf("setting proposal cid: %v", err)
+		return fmt.Errorf("setting proposal cid: %v", err)
 	}
 	// ready to fetch data, so the requested quota is actually in use.
 	s.bytesLimiter.Secure(prop.AuctionId)
 	log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
-	return nil, nil
+	return nil
 }
 
 func (s *Service) printStats() func() {
-	startAt := time.Now()
 	tk := time.NewTicker(10 * time.Minute)
 	stop := make(chan struct{})
 	go func() {
@@ -510,11 +486,36 @@ func (s *Service) printStats() func() {
 			case <-tk.C:
 				if err := s.store.HealthCheck(); err != nil {
 					log.Errorf("store not healthy: %v", err)
+					s.reportUnhealthy(err)
 				}
-				log.Infof("bidbot up %v, %d connected peers",
-					time.Since(startAt), len(s.peer.ListPeers()))
 			}
 		}
 	}()
 	return func() { close(stop) }
+}
+
+func (s *Service) reportStartup() {
+	_, unconfigured := s.pricingRules.(pricing.EmptyRules)
+	event := &pb.BidbotEvent{
+		Ts: timestamppb.New(time.Now()),
+		Type: &pb.BidbotEvent_Startup_{Startup: &pb.BidbotEvent_Startup{
+			SemanticVersion:      "",
+			DealStartWindow:      s.bidParams.DealStartWindow,
+			StorageProviderId:    s.bidParams.StorageProviderID,
+			CidGravityConfigured: !unconfigured,
+			CidGravityStrict:     s.pricingRulesStrict,
+		}},
+	}
+	s.comm.PublishBidbotEvent(s.ctx, event)
+}
+
+func (s *Service) reportUnhealthy(err error) {
+	event := &pb.BidbotEvent{
+		Ts: timestamppb.New(time.Now()),
+		Type: &pb.BidbotEvent_Unhealthy_{Unhealthy: &pb.BidbotEvent_Unhealthy{
+			StorageProviderId: s.bidParams.StorageProviderID,
+			Error:             err.Error(),
+		}},
+	}
+	s.comm.PublishBidbotEvent(s.ctx, event)
 }
