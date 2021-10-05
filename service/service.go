@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -22,6 +21,7 @@ import (
 	"github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/filclient"
+	"github.com/textileio/bidbot/service/comm"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	"github.com/textileio/bidbot/service/pricing"
@@ -147,12 +147,11 @@ func (f *MinMaxFilter) Validate() error {
 
 // Service is a miner service that subscribes to brokered deals.
 type Service struct {
-	peer       *peer.Peer
+	comm       comm.Comm
 	decryptKey tcrypto.DecryptionKey
 	fc         filclient.FilClient
 	lc         lotusclient.LotusClient
 	store      *bidstore.Store
-	subscribed bool
 
 	bidParams           BidParams
 	auctionFilters      AuctionFilters
@@ -163,7 +162,6 @@ type Service struct {
 
 	ctx       context.Context
 	finalizer *finalizer.Finalizer
-	lk        sync.Mutex
 }
 
 // New returns a new Service.
@@ -230,7 +228,6 @@ func New(
 	}
 
 	srv := &Service{
-		peer:                p,
 		decryptKey:          decryptKey,
 		fc:                  fc,
 		lc:                  lc,
@@ -247,6 +244,7 @@ func New(
 	if srv.pricingRules == nil {
 		srv.pricingRules = pricing.EmptyRules{}
 	}
+	srv.finalizer.AddFn(srv.printStats())
 	log.Info("service started")
 
 	return srv, nil
@@ -262,57 +260,7 @@ func (s *Service) Close() error {
 // If bootstrap is true, the peer will dial the configured bootstrap addresses
 // before joining the deal auction feed.
 func (s *Service) Subscribe(bootstrap bool) error {
-	s.lk.Lock()
-	defer s.lk.Unlock()
-	if s.subscribed {
-		return nil
-	}
-
-	// Bootstrap against configured addresses
-	if bootstrap {
-		s.peer.Bootstrap()
-	}
-
-	// Subscribe to the global auctions topic
-	auctions, err := s.peer.NewTopic(s.ctx, auction.Topic, true)
-	if err != nil {
-		return fmt.Errorf("creating auction topic: %v", err)
-	}
-	auctions.SetEventHandler(s.eventHandler)
-	auctions.SetMessageHandler(s.auctionsHandler)
-
-	// Subscribe to our own wins topic
-	wins, err := s.peer.NewTopic(s.ctx, auction.WinsTopic(s.peer.Host().ID()), true)
-	if err != nil {
-		if err := auctions.Close(); err != nil {
-			log.Errorf("closing auctions topic: %v", err)
-		}
-		return fmt.Errorf("creating wins topic: %v", err)
-	}
-	wins.SetEventHandler(s.eventHandler)
-	wins.SetMessageHandler(s.winsHandler)
-
-	// Subscribe to our own proposals topic
-	props, err := s.peer.NewTopic(s.ctx, auction.ProposalsTopic(s.peer.Host().ID()), true)
-	if err != nil {
-		if err := auctions.Close(); err != nil {
-			log.Errorf("closing auctions topic: %v", err)
-		}
-		if err := wins.Close(); err != nil {
-			log.Errorf("closing wins topic: %v", err)
-		}
-		return fmt.Errorf("creating proposals topic: %v", err)
-	}
-	props.SetEventHandler(s.eventHandler)
-	props.SetMessageHandler(s.proposalHandler)
-
-	s.finalizer.Add(auctions, wins, props)
-
-	log.Info("subscribed to the deal auction feed")
-	s.subscribed = true
-
-	s.finalizer.AddFn(s.printStats())
-	return nil
+	return s.comm.Start(bootstrap)
 }
 
 // PeerInfo returns the public information of the market peer.
@@ -333,10 +281,6 @@ func (s *Service) GetBid(id auction.BidID) (*bidstore.Bid, error) {
 // WriteDataURI writes a data uri resource to the configured deal data directory.
 func (s *Service) WriteDataURI(payloadCid, uri string) (string, error) {
 	return s.store.WriteDataURI("", payloadCid, uri, 0)
-}
-
-func (s *Service) eventHandler(from core.ID, topic string, msg []byte) {
-	log.Debugf("%s peer event: %s %s", topic, from, msg)
 }
 
 func (s *Service) auctionsHandler(from core.ID, topic string, msg []byte) ([]byte, error) {
@@ -425,31 +369,14 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	if err != nil {
 		return fmt.Errorf("marshaling message: %v", err)
 	}
-
-	// Create bids topic
-	topic, err := s.peer.NewTopic(s.ctx, auction.BidsTopic(auction.ID(a.Id)), false)
-	if err != nil {
-		return fmt.Errorf("creating bids topic: %v", err)
-	}
-	defer func() {
-		if err := topic.Close(); err != nil {
-			log.Errorf("closing bids topic: %v", err)
-		}
-	}()
-	topic.SetEventHandler(s.eventHandler)
-
 	// Submit bid to auctioneer
 	ctx2, cancel2 := context.WithTimeout(s.ctx, bidsAckTimeout)
 	defer cancel2()
-	res, err := topic.Publish(ctx2, msg)
+
+	id, err := s.comm.NewBid(ctx2, auction.BidsTopic(auction.ID(a.Id)), msg)
 	if err != nil {
-		return fmt.Errorf("publishing bid: %v", err)
+		return fmt.Errorf("sending bid: %v", err)
 	}
-	r := <-res
-	if r.Err != nil {
-		return fmt.Errorf("publishing bid; auctioneer %s returned error: %v", from, r.Err)
-	}
-	id := r.Data
 
 	payloadCid, err := cid.Parse(a.PayloadCid)
 	if err != nil {
