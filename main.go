@@ -211,8 +211,8 @@ Zero means no limits`,
 
 var rootCmd = &cobra.Command{
 	Use:   cliName,
-	Short: "Bidbot listens for Filecoin storage deal auctions from deal brokers",
-	Long: `Bidbot listens for Filecoin storage deal auctions from deal brokers.
+	Short: "Bidbot listens for Filecoin storage deal auctions",
+	Long: `Bidbot listens for Filecoin storage deal auctions.
 
 bidbot will automatically bid on storage deals that pass configured filters at
 the configured prices.
