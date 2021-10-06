@@ -15,6 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	core "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/oklog/ulid/v2"
+	"github.com/textileio/bidbot/buildinfo"
 	pb "github.com/textileio/bidbot/gen/v1"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/cast"
@@ -243,7 +244,7 @@ func New(
 	if srv.pricingRules == nil {
 		srv.pricingRules = pricing.EmptyRules{}
 	}
-	srv.finalizer.AddFn(srv.printStats())
+	srv.finalizer.AddFn(srv.healthChecks())
 	log.Info("service started")
 
 	return srv, nil
@@ -255,12 +256,12 @@ func (s *Service) Close() error {
 	return s.finalizer.Cleanup(nil)
 }
 
-// Subscribe to the deal auction feed.
+// Subscribe to the deal auction feed. Upon success, it reports basic bidbot information to auctioneer after some delay.
 // If bootstrap is true, the peer will dial the configured bootstrap addresses before joining the deal auction feed.
 func (s *Service) Subscribe(bootstrap bool) error {
 	err := s.commChannel.Subscribe(bootstrap, s)
 	if err == nil {
-		s.reportStartup()
+		time.AfterFunc(30*time.Second, s.reportStartup)
 	}
 	return err
 }
@@ -474,7 +475,22 @@ func (s *Service) ProposalsHandler(prop *pb.WinningBidProposal) error {
 	return nil
 }
 
-func (s *Service) printStats() func() {
+func (s *Service) reportStartup() {
+	_, unconfigured := s.pricingRules.(pricing.EmptyRules)
+	event := &pb.BidbotEvent{
+		Ts: timestamppb.New(time.Now()),
+		Type: &pb.BidbotEvent_Startup_{Startup: &pb.BidbotEvent_Startup{
+			SemanticVersion:      buildinfo.Version,
+			DealStartWindow:      s.bidParams.DealStartWindow,
+			StorageProviderId:    s.bidParams.StorageProviderID,
+			CidGravityConfigured: !unconfigured,
+			CidGravityStrict:     s.pricingRulesStrict,
+		}},
+	}
+	s.commChannel.PublishBidbotEvent(s.ctx, event)
+}
+
+func (s *Service) healthChecks() func() {
 	tk := time.NewTicker(10 * time.Minute)
 	stop := make(chan struct{})
 	go func() {
@@ -491,21 +507,6 @@ func (s *Service) printStats() func() {
 		}
 	}()
 	return func() { close(stop) }
-}
-
-func (s *Service) reportStartup() {
-	_, unconfigured := s.pricingRules.(pricing.EmptyRules)
-	event := &pb.BidbotEvent{
-		Ts: timestamppb.New(time.Now()),
-		Type: &pb.BidbotEvent_Startup_{Startup: &pb.BidbotEvent_Startup{
-			SemanticVersion:      "",
-			DealStartWindow:      s.bidParams.DealStartWindow,
-			StorageProviderId:    s.bidParams.StorageProviderID,
-			CidGravityConfigured: !unconfigured,
-			CidGravityStrict:     s.pricingRulesStrict,
-		}},
-	}
-	s.commChannel.PublishBidbotEvent(s.ctx, event)
 }
 
 func (s *Service) reportUnhealthy(err error) {

@@ -48,7 +48,7 @@ func NewLibp2pPubsub(ctx context.Context, conf peer.Config) (*Libp2pPubsub, erro
 	}
 	fin.Add(p)
 
-	events, err := p.NewTopic(ctx, auction.BidbotEventsTopic(p.Host().ID()), false)
+	events, err := p.NewTopic(ctx, auction.BidbotEventsTopic, false)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bidbot events topic: %v", err)
 	}
@@ -135,6 +135,16 @@ func (ps *Libp2pPubsub) Close() error {
 	return ps.finalizer.Cleanup(nil)
 }
 
+// ID returns the peer ID of the channel.
+func (ps *Libp2pPubsub) ID() core.ID {
+	return ps.peer.Host().ID()
+}
+
+// Info returns the peer Info of the channel.
+func (ps *Libp2pPubsub) Info() (*peer.Info, error) {
+	return ps.peer.Info()
+}
+
 // PublishBid publishes the bid to the given topic name.
 func (ps *Libp2pPubsub) PublishBid(ctx context.Context, topicName string, bid *pb.Bid) ([]byte, error) {
 	topic, err := ps.peer.NewTopic(ps.ctx, topicName, false)
@@ -146,8 +156,8 @@ func (ps *Libp2pPubsub) PublishBid(ctx context.Context, topicName string, bid *p
 			log.Errorf("closing bids topic: %v", err)
 		}
 	}()
-	topic.SetEventHandler(ps.eventHandler)
 
+	topic.SetEventHandler(ps.eventHandler)
 	msg, err := proto.Marshal(bid)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling bid: %v", err)
@@ -166,26 +176,18 @@ func (ps *Libp2pPubsub) PublishBid(ctx context.Context, topicName string, bid *p
 
 // PublishBidbotEvent publishes the given event.
 func (ps *Libp2pPubsub) PublishBidbotEvent(ctx context.Context, event *pb.BidbotEvent) {
+	log.Debugf("publishing bidbot event: %+v", event.Type)
 	msg, err := proto.Marshal(event)
 	if err != nil {
 		log.Warnf("marshaling bidbot event: %v", err)
 		return
 	}
-	if _, err := ps.eventsTopic.Publish(ctx, msg); err != nil {
+	// best effort delivery
+	if _, err := ps.eventsTopic.Publish(ctx, msg, rpc.WithIgnoreResponse(true)); err != nil {
 		log.Warnf("publishing bidbot event: %v", err)
 	}
 }
 
-// ID returns the peer ID of the channel.
-func (ps *Libp2pPubsub) ID() core.ID {
-	return ps.peer.Host().ID()
-}
-
-// Info returns the peer Info of the channel.
-func (ps *Libp2pPubsub) Info() (*peer.Info, error) {
-	return ps.peer.Info()
-}
-
 func (ps *Libp2pPubsub) eventHandler(from core.ID, topic string, msg []byte) {
-	log.Debugf("%s peer event: %s %s", topic, from, msg)
+	log.Debugf("%s peer event: %s %s", topic, from, string(msg))
 }
