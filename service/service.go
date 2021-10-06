@@ -21,7 +21,6 @@ import (
 	"github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
 	"github.com/textileio/bidbot/lib/filclient"
-	"github.com/textileio/bidbot/service/comm"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	"github.com/textileio/bidbot/service/pricing"
@@ -148,11 +147,11 @@ func (f *MinMaxFilter) Validate() error {
 
 // Service is a miner service that subscribes to auctions.
 type Service struct {
-	comm       comm.Comm
-	decryptKey tcrypto.DecryptionKey
-	fc         filclient.FilClient
-	lc         lotusclient.LotusClient
-	store      *bidstore.Store
+	commChannel CommChannel
+	decryptKey  tcrypto.DecryptionKey
+	fc          filclient.FilClient
+	lc          lotusclient.LotusClient
+	store       *bidstore.Store
 
 	bidParams           BidParams
 	auctionFilters      AuctionFilters
@@ -182,11 +181,11 @@ func New(
 	ctx, cancel := context.WithCancel(context.Background())
 	fin.Add(finalizer.NewContextCloser(cancel))
 
-	comm, err := comm.NewLibp2pPubsub(ctx, conf.Peer)
+	commChannel, err := NewLibp2pPubsub(ctx, conf.Peer)
 	if err != nil {
 		return nil, fin.Cleanupf("creating peer: %v", err)
 	}
-	fin.Add(comm)
+	fin.Add(commChannel)
 
 	// Create bid store
 	s, err := bidstore.NewStore(
@@ -195,7 +194,7 @@ func New(
 		conf.BidParams.DealDataDirectory,
 		conf.BidParams.DealDataFetchAttempts,
 		conf.BidParams.DealDataFetchTimeout,
-		progressReporter{comm, ctx},
+		progressReporter{commChannel, ctx},
 		conf.BidParams.DiscardOrphanDealsAfter,
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
@@ -208,7 +207,7 @@ func New(
 	// Verify StorageProvider ID
 	ok, err := fc.VerifyBidder(
 		conf.BidParams.WalletAddrSig,
-		comm.ID(),
+		commChannel.ID(),
 		conf.BidParams.StorageProviderID)
 	if err != nil {
 		return nil, fin.Cleanupf("verifying StorageProvider ID: %v", err)
@@ -227,7 +226,7 @@ func New(
 	}
 
 	srv := &Service{
-		comm:                comm,
+		commChannel:         commChannel,
 		decryptKey:          decryptKey,
 		fc:                  fc,
 		lc:                  lc,
@@ -259,7 +258,7 @@ func (s *Service) Close() error {
 // Subscribe to the deal auction feed.
 // If bootstrap is true, the peer will dial the configured bootstrap addresses before joining the deal auction feed.
 func (s *Service) Subscribe(bootstrap bool) error {
-	err := s.comm.Subscribe(bootstrap, s)
+	err := s.commChannel.Subscribe(bootstrap, s)
 	if err == nil {
 		s.reportStartup()
 	}
@@ -268,7 +267,7 @@ func (s *Service) Subscribe(bootstrap bool) error {
 
 // PeerInfo returns the public information of the market peer.
 func (s *Service) PeerInfo() (*peer.Info, error) {
-	return s.comm.Info()
+	return s.commChannel.Info()
 }
 
 // ListBids lists bids by applying a store.Query.
@@ -365,7 +364,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 	ctx2, cancel2 := context.WithTimeout(s.ctx, bidsAckTimeout)
 	defer cancel2()
 
-	id, err := s.comm.PublishBid(ctx2, auction.BidsTopic(auction.ID(a.Id)), bid)
+	id, err := s.commChannel.PublishBid(ctx2, auction.BidsTopic(auction.ID(a.Id)), bid)
 	if err != nil {
 		return fmt.Errorf("sending bid: %v", err)
 	}
@@ -506,7 +505,7 @@ func (s *Service) reportStartup() {
 			CidGravityStrict:     s.pricingRulesStrict,
 		}},
 	}
-	s.comm.PublishBidbotEvent(s.ctx, event)
+	s.commChannel.PublishBidbotEvent(s.ctx, event)
 }
 
 func (s *Service) reportUnhealthy(err error) {
@@ -517,5 +516,5 @@ func (s *Service) reportUnhealthy(err error) {
 			Error:             err.Error(),
 		}},
 	}
-	s.comm.PublishBidbotEvent(s.ctx, event)
+	s.commChannel.PublishBidbotEvent(s.ctx, event)
 }

@@ -6,13 +6,12 @@ import (
 
 	pb "github.com/textileio/bidbot/gen/v1"
 	"github.com/textileio/bidbot/lib/auction"
-	"github.com/textileio/bidbot/service/comm"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type progressReporter struct {
-	comm comm.Comm
-	ctx  context.Context
+	commChannel CommChannel
+	ctx         context.Context
 }
 
 func (pr progressReporter) StartFetching(bidID auction.BidID, attempts uint32) {
@@ -23,7 +22,7 @@ func (pr progressReporter) StartFetching(bidID auction.BidID, attempts uint32) {
 			Attempts: attempts,
 		}},
 	}
-	pr.comm.PublishBidbotEvent(pr.ctx, event)
+	pr.commChannel.PublishBidbotEvent(pr.ctx, event)
 }
 func (pr progressReporter) ErrorFetching(bidID auction.BidID, attempts uint32, err error) {
 	if err == nil {
@@ -37,7 +36,7 @@ func (pr progressReporter) ErrorFetching(bidID auction.BidID, attempts uint32, e
 			Error:    err.Error(),
 		}},
 	}
-	pr.comm.PublishBidbotEvent(pr.ctx, event)
+	pr.commChannel.PublishBidbotEvent(pr.ctx, event)
 }
 func (pr progressReporter) StartImporting(bidID auction.BidID, attempts uint32) {
 	event := &pb.BidbotEvent{
@@ -47,7 +46,7 @@ func (pr progressReporter) StartImporting(bidID auction.BidID, attempts uint32) 
 			Attempts: attempts,
 		}},
 	}
-	pr.comm.PublishBidbotEvent(pr.ctx, event)
+	pr.commChannel.PublishBidbotEvent(pr.ctx, event)
 }
 
 func (pr progressReporter) EndImporting(bidID auction.BidID, attempts uint32, err error) {
@@ -63,7 +62,7 @@ func (pr progressReporter) EndImporting(bidID auction.BidID, attempts uint32, er
 		event.Type.(*pb.BidbotEvent_EndImporting_).EndImporting.Error = err.Error()
 	}
 
-	pr.comm.PublishBidbotEvent(pr.ctx, event)
+	pr.commChannel.PublishBidbotEvent(pr.ctx, event)
 }
 
 func (pr progressReporter) Finalized(bidID auction.BidID) {
@@ -73,7 +72,7 @@ func (pr progressReporter) Finalized(bidID auction.BidID) {
 			BidId: string(bidID),
 		}},
 	}
-	pr.comm.PublishBidbotEvent(pr.ctx, event)
+	pr.commChannel.PublishBidbotEvent(pr.ctx, event)
 }
 
 func (pr progressReporter) Errored(bidID auction.BidID, errorCause string) {
@@ -84,5 +83,5 @@ func (pr progressReporter) Errored(bidID auction.BidID, errorCause string) {
 			ErrorCause: errorCause,
 		}},
 	}
-	pr.comm.PublishBidbotEvent(pr.ctx, event)
+	pr.commChannel.PublishBidbotEvent(pr.ctx, event)
 }

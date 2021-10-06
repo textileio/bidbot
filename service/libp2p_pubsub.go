@@ -1,4 +1,4 @@
-package comm
+package service
 
 import (
 	"context"
@@ -10,16 +10,11 @@ import (
 	rpc "github.com/textileio/go-libp2p-pubsub-rpc"
 	"github.com/textileio/go-libp2p-pubsub-rpc/finalizer"
 	"github.com/textileio/go-libp2p-pubsub-rpc/peer"
-	golog "github.com/textileio/go-log/v2"
 	"google.golang.org/protobuf/proto"
 )
 
-var (
-	log = golog.Logger("bidbot/comm")
-)
-
-// Comm represents the communication channel with auctioneer.
-type Comm interface {
+// CommChannel represents the communication channel with auctioneer.
+type CommChannel interface {
 	Subscribe(bootstrap bool, eh MessageHandler) error
 	Close() error
 	ID() core.ID
@@ -44,7 +39,7 @@ type Libp2pPubsub struct {
 	eventsTopic *rpc.Topic
 }
 
-// NewLibp2pPubsub creates a Comm backed by libp2p pubsub.
+// NewLibp2pPubsub creates a communication channel backed by libp2p pubsub.
 func NewLibp2pPubsub(ctx context.Context, conf peer.Config) (*Libp2pPubsub, error) {
 	fin := finalizer.NewFinalizer()
 	p, err := peer.New(conf)
