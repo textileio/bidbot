@@ -12,6 +12,9 @@ type ID string
 // Topic is used by auctioneers to publish and by miners to subscribe to deal auction.
 const Topic string = "/textile/auction/0.0.1"
 
+// BidbotEventsTopic is used by bidbots to notify auctioneers various events, mainly around the lifecycle of bids.
+var BidbotEventsTopic string = path.Join(Topic, "bidbot_events")
+
 // BidsTopic is used by miners to submit deal auction bids.
 // "/textile/auction/0.0.1/<auction_id>/bids".
 func BidsTopic(auctionID ID) string {
@@ -28,10 +31,4 @@ func WinsTopic(pid peer.ID) string {
 // "/textile/auction/0.0.1/<peer_id>/proposals".
 func ProposalsTopic(pid peer.ID) string {
 	return path.Join(Topic, pid.String(), "proposals")
-}
-
-// BidbotEventsTopic is used by bidbots to notify auctioneers various events, mainly around the lifecycle of bids.
-// "/textile/auction/0.0.1/<peer_id>/bidbot_events".
-func BidbotEventsTopic(pid peer.ID) string {
-	return path.Join(Topic, pid.String(), "bidbot_events")
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	util "github.com/ipfs/go-ipfs-util"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	pb "github.com/textileio/bidbot/gen/v1"
@@ -119,6 +121,8 @@ func TestBytesLimit(t *testing.T) {
 		t.Skip()
 	}
 	service.BidsExpiration = 2 * time.Second
+
+	// setup a mock auctioneer
 	peerConfig, _ := newPeerConfig(t)
 	mockAuctioneer, err := rpcpeer.New(peerConfig)
 	require.NoError(t, err)
@@ -142,11 +146,24 @@ func TestBytesLimit(t *testing.T) {
 
 	auctions, err := mockAuctioneer.NewTopic(context.Background(), core.Topic, false)
 	require.NoError(t, err)
+	bidbotEvents, err := mockAuctioneer.NewTopic(context.Background(), core.BidbotEventsTopic, true)
+	require.NoError(t, err)
+	var receivedEvents int32
+	bidbotEvents.SetMessageHandler(func(from peer.ID, _ string, msg []byte) ([]byte, error) {
+		event := &pb.BidbotEvent{}
+		err := proto.Unmarshal(msg, event)
+		require.NoError(t, err)
+		t.Logf("%+v", event)
+		atomic.AddInt32(&receivedEvents, 1)
+		return nil, nil
+	})
+
 	var createTopicOnce sync.Once
 	var wins *rpc.Topic
 	var proposals *rpc.Topic
 	chWinsResponse := make(chan error)
-	runAuction := func(t *testing.T, auctionID string, expectGoodResponse bool, sendProposal bool) {
+	runAuction := func(t *testing.T, auctionID string, expectGoodResponse bool, sendProposal bool, expectedEvents int32) {
+		eventsBefore := atomic.LoadInt32(&receivedEvents)
 		auction := &pb.Auction{
 			Id:               auctionID,
 			PayloadCid:       payloadCid.String(),
@@ -207,22 +224,24 @@ func TestBytesLimit(t *testing.T) {
 		if !expectGoodResponse {
 			require.Error(t, winsResponseError,
 				fmt.Sprintf("should have responded error for wins in auction %s", auctionID))
-			require.Equal(t, core.ErrStringWouldExceedRunningBytesLimit, winsResponseError.Error(),
+			assert.Equal(t, core.ErrStringWouldExceedRunningBytesLimit, winsResponseError.Error(),
 				fmt.Sprintf("should have responded expected error message in auction %s", auctionID))
 		} else {
 			require.NoError(t, winsResponseError,
 				fmt.Sprintf("should have had not error for wins in auction %s", auctionID))
 		}
+		time.Sleep(time.Second) // waiting for the events to be recorded
+		assert.Equal(t, expectedEvents, atomic.LoadInt32(&receivedEvents)-eventsBefore)
 	}
-	t.Run("limit is not hit", func(t *testing.T) { runAuction(t, "auction-1", true, false) })
-	t.Run("limit is hit", func(t *testing.T) { runAuction(t, "auction-2", false, false) })
+	t.Run("limit is not hit", func(t *testing.T) { runAuction(t, "auction-1", true, false, 0) })
+	t.Run("limit is hit", func(t *testing.T) { runAuction(t, "auction-2", false, false, 0) })
 	time.Sleep(service.BidsExpiration)
 	t.Run("limit is reset (requested quota for auction-1 is expired), now sends proposal to finish download",
-		func(t *testing.T) { runAuction(t, "auction-3", true, true) })
+		func(t *testing.T) { runAuction(t, "auction-3", true, true, 4) })
 	time.Sleep(service.BidsExpiration)
-	t.Run("limit is still hit", func(t *testing.T) { runAuction(t, "auction-4", false, true) })
+	t.Run("limit is still hit", func(t *testing.T) { runAuction(t, "auction-4", false, true, 0) })
 	time.Sleep(limitPeriod)
-	t.Run("limit is cleared after the period", func(t *testing.T) { runAuction(t, "auction-5", true, true) })
+	t.Run("limit is cleared after the period", func(t *testing.T) { runAuction(t, "auction-5", true, true, 4) })
 }
 
 func validConfig(t *testing.T) (service.Config, txndswrap.TxnDatastore) {
