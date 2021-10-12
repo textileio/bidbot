@@ -266,13 +266,13 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 
 2. Start listening for deal auctions using the wallet address and signature from step 1:
 
-    bidbot daemon --storage-provider-id [id]
-                  --wallet-addr-sig [signature]
-                  --lotus-miner-api-maddr [lotus-miner-api-maddr]
-                  --lotus-miner-api-token [lotus-miner-api-token-with-write-access]
-                  --lotus-market-api-maddr [lotus-market-api-maddr]
-                  --lotus-market-api-token [lotus-market-api-token-with-write-access]
-                  --deal-start-window [correct-deal-start-epoch-window-for-your-miner]
+    bidbot daemon --storage-provider-id <id>
+                  --wallet-addr-sig <signature>
+                  --lotus-miner-api-maddr <lotus-miner-api-maddr>
+                  --lotus-miner-api-token <lotus-miner-api-token-with-write-access>
+                  [--lotus-market-api-maddr <lotus-market-api-maddr>]
+                  [--lotus-market-api-token <lotus-market-api-token-with-write-access>]
+                  --deal-start-window <correct-deal-start-epoch-window-for-your-miner>
 
 Note: In the event you win an auction, you must use this wallet address to make the deal(s).
 
@@ -347,7 +347,7 @@ var daemonCmd = &cobra.Command{
 			v.GetInt("lotus-api-conn-retries"),
 			v.GetBool("fake-mode"),
 		)
-		cli.CheckErrf("creating lotus-miner client: %v", err)
+		cli.CheckErrf("creating lotus client: %v", err)
 		fin.Add(lc)
 
 		fc, err := filclient.New(v.GetString("lotus-gateway-url"), v.GetBool("fake-mode"))
