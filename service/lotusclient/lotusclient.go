@@ -32,7 +32,8 @@ type LotusClient interface {
 
 // Client provides access to Lotus for importing deal data.
 type Client struct {
-	c        api.StorageMiner
+	cmin     api.StorageMiner
+	cmkt     api.StorageMiner
 	fakeMode bool
 
 	ctx       context.Context
@@ -40,7 +41,7 @@ type Client struct {
 }
 
 // New returns a new *LotusClient.
-func New(maddr string, authToken string, connRetries int, fakeMode bool) (*Client, error) {
+func New(maddr string, authToken string, marketMaddr string, marketAuthToken string, connRetries int, fakeMode bool) (*Client, error) {
 	fin := finalizer.NewFinalizer()
 	ctx, cancel := context.WithCancel(context.Background())
 	fin.Add(finalizer.NewContextCloser(cancel))
@@ -58,14 +59,30 @@ func New(maddr string, authToken string, connRetries int, fakeMode bool) (*Clien
 	if err != nil {
 		return nil, fmt.Errorf("building lotus client: %w", err)
 	}
-	c, closer, err := builder(lc.ctx)
+	cmin, closer, err := builder(lc.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("starting lotus client: %w", err)
 	}
 	fin.AddFn(closer)
 
+	var cmkt api.StorageMiner
+	if marketMaddr != "" {
+		builder, err = newBuilder(marketMaddr, marketAuthToken, connRetries)
+		if err != nil {
+			return nil, fmt.Errorf("building lotus market client: %w", err)
+		}
+		cmkt, closer, err = builder(lc.ctx)
+		if err != nil {
+			return nil, fmt.Errorf("starting lotus market client: %w", err)
+		}
+		fin.AddFn(closer)
+	} else {
+		cmkt = cmin
+	}
+
 	client := &Client{
-		c:         c,
+		cmin:      cmin,
+		cmkt:      cmkt,
 		fakeMode:  fakeMode,
 		ctx:       ctx,
 		finalizer: fin,
@@ -90,7 +107,7 @@ func (c *Client) HealthCheck() error {
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
 	start := time.Now()
-	_, err := c.c.MarketListIncompleteDeals(ctx)
+	_, err := c.cmkt.MarketListIncompleteDeals(ctx)
 	log.Infof("MarketListIncompleteDeals call took %v", time.Since(start))
 	return err
 }
@@ -108,7 +125,7 @@ func (c *Client) CurrentSealingSectors() (int, error) {
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
 	start := time.Now()
-	sectorsByState, err := c.c.SectorsSummary(ctx)
+	sectorsByState, err := c.cmin.SectorsSummary(ctx)
 	log.Debugf("SectorsSummary() call took %.2f seconds", time.Since(start).Seconds())
 	if err != nil {
 		return 0, fmt.Errorf("getting lotus sectors summary: %s", err)
@@ -131,7 +148,7 @@ func (c *Client) ImportData(pcid cid.Cid, file string) error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()
-	if err := c.c.MarketImportDealData(ctx, pcid, file); err != nil {
+	if err := c.cmkt.MarketImportDealData(ctx, pcid, file); err != nil {
 		return fmt.Errorf("calling storage miner deals import data: %w", err)
 	}
 	return nil
