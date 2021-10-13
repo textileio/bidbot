@@ -41,7 +41,8 @@ type Client struct {
 }
 
 // New returns a new *LotusClient.
-func New(maddr string, authToken string, marketMaddr string, marketAuthToken string, connRetries int, fakeMode bool) (*Client, error) {
+func New(maddr string, authToken string, marketMaddr string, marketAuthToken string,
+            connRetries int, fakeMode bool) (*Client, error) {
 	fin := finalizer.NewFinalizer()
 	ctx, cancel := context.WithCancel(context.Background())
 	fin.Add(finalizer.NewContextCloser(cancel))
