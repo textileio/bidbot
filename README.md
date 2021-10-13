@@ -13,7 +13,9 @@ Join us on our [public Slack channel](https://slack.textile.io/) for news, discu
 - [Installation](#installation)
 - [What is the Auctioneer](#what-is-an-auctioneer)
 - [How do I connect with the system?](#how-do-i-connect-with-the-system)
+- [CID gravity integration](#cid-gravity-integration)
 - [Useful `bidbot` commands](#useful-bidbot-operational-commands)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 - [License](#license)
@@ -28,7 +30,7 @@ cd bidbot
 make install
 ```
 
-# What is an Auctioneer?
+## What is an Auctioneer?
 
 First, we must understand that `bidbot` is a piece that's part of a bigger picture: the storage auction system.
 The storage auction system (Auctioneer) is a system that receives data from multiple clients, aggregates them, and makes it available for storage providers to store. The Auctioneer has several unique properties that make it different than your typical Filecoin client.
@@ -69,7 +71,7 @@ If you win an auction, you will be notified about it! If that weren't the case, 
 
 The Auctioneer relies on offline deals to make deals with storage providers. After you win an auction, your bidbot will pull the deal data from the client. You can think of this flow as an *automatic* offline deal setup where instead of receiving hard drives, you'll pull the data from someplace and then receive the offline-deal proposal.
 
-# How do I connect with the system?
+## How do I connect with the system?
 
 The hypothetical scenario in the previous section obviously didn't explain how you would really send bids or interact with the Auctioneer. The following diagram will help to get a better picture:
 
@@ -85,7 +87,7 @@ The `carFilePath` is the CAR file that `bidbot` generated after downloading the 
 
 There's nothing more to do than the usual flow of deal execution steps from that moment forward. What's important is that the deal becomes active on-chain before the *StartDealEpoch* you promised in your bid!
 
-## How do I run `bidbot`?
+### How do I run `bidbot`?
 
 Here're the steps to do it:
 
@@ -104,10 +106,7 @@ Here're the steps to do it:
 - The `--lotus-miner-api-token` should have `write` access.
 - Consider using the `--sealing-sectors-limit` flag to allow `bidbot` pause bidding if you have more than the specified number of sectors sealing.
 
-
-
-
-# How does this fit in my current miner infrastructure?
+## How does this fit in my current miner infrastructure?
 
 The following diagram shows how bidbot, auctioneer, and your lotus-miner interact:
 
@@ -115,7 +114,7 @@ The following diagram shows how bidbot, auctioneer, and your lotus-miner interac
 
 **Note**: you can install `bidbot` on the same host as your miner daemon, but there's a reasonable chance that you might want to avoid that for security reasons.
 
-## OK, I've it running, what I should see?
+### OK, I've it running, what I should see?
 
 First, congratulation on being connected! When starting your `bidbot` daemon, you should see the following lines appearing in your console:
 
@@ -170,22 +169,41 @@ If you win an auction, you should see a log line similar to:
 2021-05-28T17:53:13.790-0300    DEBUG   bidbot/service  service/service.go:225  /textile/auction/0.0.1/12D3KooWPX8uutGrghEYLt1i9EPmLmwSUYtYD3BN1tvARK5YXDXV/wins received win from 12D3KooWRhbmhcWGB84qPehvZvtVyzW8qNkdbcX2gGidhAmJBzhi
 ```
 
-# Useful `bidbot` operational commands
-
-If you have `bidbot` daemon running, we recommend you explore the following available commands:
-
-- `bidbot download <data-uri>`: This command allows you to download a CAR file to the `bidbot` download folder. This can be helpful to test downloads or manually re-download a particular CAR from a won auction (if that's necessary).
-- `bidbot deals list`: This command shows you a list of your won auctions and some summary of which stage you're in the process.
-- `bidbot deals show <auction-id>`: This command shows detailed information about a won auction.
-
-Do you think `bidbot` can have other commands that would make your life easier? We're interested in knowing about that!
-
-# CID gravity integration
+## CID gravity integration
 
 [CID gravity](https://www.cidgravity.com) is a tool for storage providers to manage clients and price tiers. If integrated, bidbot can bid based on the configuration there, rather than locally configured `--ask-price` and `--verified-ask-price`. There are only two parameters involved.
 
 * `--cid-gravity-key`. You should be able to generate one by clicking the "Integrations" menu item from the CID gravity console.
 * `--cid-gravity-strict`. By default, if bidbot can not reach the CID gravity API for some reason, it bids based on the locally configured price. If you want it to stop bidding in that case, set this to true.
+
+Bidbot deals are from either Textile's address, `f144zep4gitj73rrujd3jw6iprljicx6vl4wbeavi`, or auction client's address. The address is shown when you `bidbot deals list` or `bidbot deals show`. If you want to have specific pricing model for bidbot deals, create a client with the pricing model in CID gravity console, then add the client addresses you care about.
+
+## Useful `bidbot` operational commands
+
+If you have `bidbot` daemon running, we recommend you explore the following available commands:
+
+- `bidbot download <payload-cid> <data-uri>`: This command allows you to download a CAR file to the `bidbot` download folder. This can be helpful to test downloads or manually re-download a particular CAR from a won auction (if that's necessary).
+- `bidbot deals list`: This command shows you a list of your won auctions and some summary of which stage you're in the process.
+- `bidbot deals show <bid-id>`: This command shows detailed information about a won auction.
+
+Do you think `bidbot` can have other commands that would make your life easier? We're interested in knowing about that!
+
+## Troubleshooting
+
+Problems can arise, especially when you are new to bidbot. Here are some common ones you may encounter:
+
+1. Lots of deals in `awaiting_proposal` status when you `bidbot deals list`. Most probably either
+    * Your miner can not be reached. Do the following to check(credit to @TippyFlitsUK)
+        - Get your miner peer ID - `lotus-miner net id`
+        - Try to find your own ID  - `lotus net findpeer YOUR_MINER_PEER_ID`
+        - Try several times with the Glif node that Bidbot uses - `FULLNODE_API_INFO="https://api.node.glif.io" lotus net findpeer YOUR_MINER_PEER_ID`.
+    * Or you set too small a `--deal-start-window`. You would see something like `deal rejected: cannot seal a sector before ...` in your miner log. Set your `deal-start-window` to be a few hours longer than `ExpectedSealDuration` in your miner config.
+
+1. Too many deals flood in, exceeding you sealing capacity. Two ways to throttle.
+    * `--running-bytes-limit` to limit the total bytes bidbot processes in a period of time. 
+    * `--sealing-sectors-limit` to pause bidding if the miner node has more than desired sectors in sealing.
+
+It is also suggested to set `--log-debug=true` and keep the logs when you want to seek help from Textile or the community.
 
 ## Contributing
 

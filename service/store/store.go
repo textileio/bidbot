@@ -90,6 +90,7 @@ type Bid struct {
 	PayloadCid           cid.Cid
 	DealSize             uint64
 	DealDuration         uint64
+	ClientAddress        string
 	Sources              auction.Sources
 	Status               BidStatus
 	AskPrice             int64 // attoFIL per GiB per epoch
