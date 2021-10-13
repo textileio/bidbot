@@ -203,7 +203,8 @@ Zero means no limits`,
 		v.SetConfigName("config")
 		v.AddConfigPath(os.Getenv("BIDBOT_PATH"))
 		v.AddConfigPath(defaultConfigPath)
-		_ = v.ReadInConfig()
+		err := v.ReadInConfig()
+		cli.CheckErrf(fmt.Sprintf("loading config from %s: %%v", v.ConfigFileUsed()), err)
 	})
 
 	cli.ConfigureCLI(v, "BIDBOT", commonFlags, rootCmd.PersistentFlags())
@@ -323,7 +324,7 @@ var daemonCmd = &cobra.Command{
 		cli.CheckErrf("getting peer config: %v", err)
 
 		settings, err := cli.MarshalConfig(v, !v.GetBool("log-json"),
-			"private-key", "wallet-addr-sig", "lotus-miner-api-token")
+			"cid-gravity-key", "private-key", "wallet-addr-sig", "lotus-miner-api-token", "lotus-market-api-token")
 		cli.CheckErrf("marshaling config: %v", err)
 		log.Infof("loaded config from %s: %s", v.ConfigFileUsed(), string(settings))
 
