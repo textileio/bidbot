@@ -203,6 +203,8 @@ Problems can arise, especially when you are new to bidbot. Here are some common 
     * `--running-bytes-limit` to limit the total bytes bidbot processes in a period of time. 
     * `--sealing-sectors-limit` to pause bidding if the miner node has more than desired sectors in sealing.
 
+1. We've seen a case when bidbot importing data long after winning the bids, it got errors like "normal shutdown of state machine" or "given data does not match expected commP ..." even though the real problem was the deal start epoch being exceeded. When in doubt, check your `lotus-miner` logs around that time for the real reason.
+
 It is also suggested to set `--log-debug=true` and keep the logs when you want to seek help from Textile or the community.
 
 ## Contributing
