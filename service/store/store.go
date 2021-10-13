@@ -22,6 +22,7 @@ import (
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri"
 	"github.com/textileio/bidbot/lib/dshelper/txndswrap"
+	"github.com/textileio/bidbot/lib/filclient"
 	"github.com/textileio/bidbot/service/limiter"
 	"github.com/textileio/bidbot/service/lotusclient"
 	dsextensions "github.com/textileio/go-datastore-extensions"
@@ -163,6 +164,7 @@ func BidStatusByString(s string) (BidStatus, error) {
 // Store stores miner auction deal bids.
 type Store struct {
 	store        txndswrap.TxnDatastore
+	fc           filclient.FilClient
 	lc           lotusclient.LotusClient
 	bytesLimiter limiter.Limiter
 
@@ -184,6 +186,7 @@ type Store struct {
 // NewStore returns a new Store.
 func NewStore(
 	store txndswrap.TxnDatastore,
+	fc filclient.FilClient,
 	lc lotusclient.LotusClient,
 	dealDataDirectory string,
 	dealDataFetchAttempts uint32,
@@ -196,6 +199,7 @@ func NewStore(
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
 		store:                 store,
+		fc:                    fc,
 		lc:                    lc,
 		bytesLimiter:          bytesLimiter,
 		jobCh:                 make(chan *Bid, MaxDataURIFetchConcurrency),
@@ -595,47 +599,51 @@ func (s *Store) fetchWorker(num int) {
 			log.Debugf(
 				"worker %d got job %s (attempt=%d/%d)", num, b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
 
-			// Fetch the data cid
-			var (
-				status BidStatus
-				logMsg string
-			)
-			s.dealProgressReporter.StartFetching(b.ID, b.DataURIFetchAttempts)
-			file, err := s.WriteDealData(b)
-			if err != nil {
-				s.dealProgressReporter.ErrorFetching(b.ID, b.DataURIFetchAttempts, err)
-				status = fail(b, err)
-				logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
+			var status BidStatus
+			if chainHeight, err := s.fc.GetChainHeight(); err == nil && b.StartEpoch < chainHeight {
+				log.Errorf("deal %v's start epoch %v is before current chain height %v",
+					b.ProposalCid.String(), b.StartEpoch, chainHeight)
+				status = fail(b, errors.New("deal is expired"))
 			} else {
-				log.Infof("importing %s to lotus with proposal cid %s", file, b.ProposalCid)
-
-				// if requested, limit the number of concurrent imports
-				if s.semImports != nil {
-					// the error returned by Acquire is
-					// always ctx.Err(), in this case never
-					// happens.
-					_ = s.semImports.Acquire(context.Background(), 1)
-				}
-				s.dealProgressReporter.StartImporting(b.ID, b.DataURIFetchAttempts)
-				err = s.lc.ImportData(b.ProposalCid, file)
-				if s.semImports != nil {
-					s.semImports.Release(1)
-				}
-
-				s.dealProgressReporter.EndImporting(b.ID, b.DataURIFetchAttempts, err)
+				var logMsg string
+				// Fetch the data cid
+				s.dealProgressReporter.StartFetching(b.ID, b.DataURIFetchAttempts)
+				file, err := s.WriteDealData(b)
 				if err != nil {
+					s.dealProgressReporter.ErrorFetching(b.ID, b.DataURIFetchAttempts, err)
 					status = fail(b, err)
 					logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
 				} else {
-					status = BidStatusFinalized
-					s.bytesLimiter.Commit(string(b.AuctionID))
-					s.dealProgressReporter.Finalized(b.ID)
-					// Reset error
-					b.ErrorCause = ""
-					logMsg = fmt.Sprintf("status=%s", status)
+					log.Infof("importing %s to lotus with proposal cid %s", file, b.ProposalCid)
+
+					// if requested, limit the number of concurrent imports
+					if s.semImports != nil {
+						// the error returned by Acquire is
+						// always ctx.Err(), in this case never
+						// happens.
+						_ = s.semImports.Acquire(context.Background(), 1)
+					}
+					s.dealProgressReporter.StartImporting(b.ID, b.DataURIFetchAttempts)
+					err = s.lc.ImportData(b.ProposalCid, file)
+					if s.semImports != nil {
+						s.semImports.Release(1)
+					}
+
+					s.dealProgressReporter.EndImporting(b.ID, b.DataURIFetchAttempts, err)
+					if err != nil {
+						status = fail(b, err)
+						logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
+					} else {
+						status = BidStatusFinalized
+						s.bytesLimiter.Commit(string(b.AuctionID))
+						s.dealProgressReporter.Finalized(b.ID)
+						// Reset error
+						b.ErrorCause = ""
+						logMsg = fmt.Sprintf("status=%s", status)
+					}
 				}
+				log.Infof("finished fetching data cid %s (%s)", b.ID, logMsg)
 			}
-			log.Infof("finished fetching data cid %s (%s)", b.ID, logMsg)
 
 			// Save and update status to "finalized"
 			if err := s.saveAndTransitionStatus(nil, b, status); err != nil {

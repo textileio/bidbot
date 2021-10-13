@@ -191,6 +191,7 @@ func New(
 	// Create bid store
 	s, err := bidstore.NewStore(
 		store,
+		fc,
 		lc,
 		conf.BidParams.DealDataDirectory,
 		conf.BidParams.DealDataFetchAttempts,
