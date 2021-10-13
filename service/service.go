@@ -380,6 +380,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		AuctionID:        auction.ID(a.Id),
 		AuctioneerID:     from,
 		PayloadCid:       payloadCid,
+		ClientAddress:    a.ClientAddress,
 		DealSize:         a.DealSize,
 		DealDuration:     a.DealDuration,
 		AskPrice:         bid.AskPrice,
@@ -480,7 +481,7 @@ func (s *Service) reportStartup() {
 	event := &pb.BidbotEvent{
 		Ts: timestamppb.New(time.Now()),
 		Type: &pb.BidbotEvent_Startup_{Startup: &pb.BidbotEvent_Startup{
-			SemanticVersion:      buildinfo.Version,
+			SemanticVersion:      buildinfo.GitSummary,
 			DealStartWindow:      s.bidParams.DealStartWindow,
 			StorageProviderId:    s.bidParams.StorageProviderID,
 			CidGravityConfigured: !unconfigured,

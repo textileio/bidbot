@@ -49,7 +49,7 @@ var (
 	v                 = viper.New()
 
 	dealsListFields = []string{"ID", "DealSize", "DealDuration", "Status", "AskPrice", "VerifiedAskPrice",
-		"StartEpoch", "DataURIFetchAttempts", "CreatedAt", "ErrorCause"}
+		"StartEpoch", "DataURIFetchAttempts", "CreatedAt", "ClientAddress", "ErrorCause"}
 	validStorageProviderID = regexp.MustCompile("^[a-z]0[0-9]+$")
 )
 
@@ -616,5 +616,6 @@ func parseRunningBytesLimit(s string) (limiter.Limiter, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("limit total running bytes to %d bytes over %v", nBytes, d)
 	return limiter.NewRunningTotalLimiter(nBytes, d), nil
 }

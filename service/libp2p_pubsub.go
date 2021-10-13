@@ -100,7 +100,11 @@ func (ps *Libp2pPubsub) Subscribe(bootstrap bool, h MessageHandler) error {
 		if err := proto.Unmarshal(msg, wb); err != nil {
 			return nil, fmt.Errorf("unmarshaling message: %v", err)
 		}
-		return nil, h.WinsHandler(wb)
+		err := h.WinsHandler(wb)
+		if err != nil {
+			log.Errorf("handling proposal for bid %s: %v", wb.BidId, err)
+		}
+		return nil, err
 	})
 	ps.finalizer.Add(wins)
 
@@ -111,14 +115,14 @@ func (ps *Libp2pPubsub) Subscribe(bootstrap bool, h MessageHandler) error {
 	}
 	props.SetEventHandler(ps.eventHandler)
 	props.SetMessageHandler(func(from core.ID, topic string, msg []byte) ([]byte, error) {
-		log.Debugf("%s received win from %s", topic, from)
+		log.Debugf("%s received proposal from %s", topic, from)
 		proposal := &pb.WinningBidProposal{}
 		if err := proto.Unmarshal(msg, proposal); err != nil {
 			return nil, fmt.Errorf("unmarshaling message: %v", err)
 		}
 		err := h.ProposalsHandler(proposal)
 		if err != nil {
-			log.Errorf("handling proposal: %v", err)
+			log.Errorf("handling wins for bid %s: %v", proposal.BidId, err)
 		}
 		return nil, err
 	})
