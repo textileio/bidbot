@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri/apitest"
+	filclientmocks "github.com/textileio/bidbot/mocks/lib/filclient"
 	lotusclientmocks "github.com/textileio/bidbot/mocks/service/lotusclient"
 	"github.com/textileio/bidbot/service/limiter"
 	badger "github.com/textileio/go-ds-badger3"
@@ -266,13 +267,21 @@ func newStore(t *testing.T) (*Store, format.DAGService, blockstore.Blockstore) {
 		PrivKey:  sk,
 	})
 	require.NoError(t, err)
-	s, err := NewStore(ds, newLotusClientMock(), t.TempDir(), 2, time.Second, nil, 0, limiter.NopeLimiter{}, 1<<30)
+	s, err := NewStore(ds, newFilClientMock(), newLotusClientMock(), t.TempDir(), 2, time.Second, nil, 0,
+		limiter.NopeLimiter{}, 1<<30)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, s.Close())
 		require.NoError(t, ds.Close())
 	})
 	return s, p.DAGService(), p.BlockStore()
+}
+
+func newFilClientMock() *filclientmocks.FilClient {
+	fc := &filclientmocks.FilClient{}
+	fc.On("GetChainHeight").Return(uint64(0), nil)
+	fc.On("Close").Return(nil)
+	return fc
 }
 
 func newLotusClientMock() *lotusclientmocks.LotusClient {
