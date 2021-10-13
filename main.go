@@ -520,7 +520,7 @@ var dealsListCmd = &cobra.Command{
 }
 
 var dealsShowCmd = &cobra.Command{
-	Use:   "show <id>",
+	Use:   "show <bid-id>",
 	Short: "Show details of one deal",
 	Long:  `Show details of one deal, specified by the bid ID, which can be obtained by 'bidbot deals list'`,
 	Args:  cobra.ExactArgs(1),
@@ -548,9 +548,9 @@ var dealsShowCmd = &cobra.Command{
 }
 
 var downloadCmd = &cobra.Command{
-	Use:   "download <cid> <uri>",
+	Use:   "download <payload-cid> <data-uri>",
 	Short: "Download and write storage deal data to disk",
-	Long: `Downloads and writes storage deal data to disk by cid and uri.
+	Long: `Downloads and writes storage deal data to disk by the payload cid and data uri.
 
 Deal data is written to BIDBOT_DEAL_DATA_DIRECTORY in CAR format.
 `,
