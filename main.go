@@ -11,10 +11,13 @@ import (
 	_ "net/http/pprof"
 	"net/url"
 	"os"
+	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -61,7 +64,8 @@ func init() {
 	}
 	_ = godotenv.Load(filepath.Join(configPath, ".env"))
 
-	rootCmd.AddCommand(initCmd, daemonCmd, idCmd, versionCmd, dealsCmd, downloadCmd, pauseCmd, resumeCmd)
+	rootCmd.AddCommand(initCmd, daemonCmd, idCmd, versionCmd, dealsCmd, downloadCmd, pauseCmd, resumeCmd,
+		installServiceCmd)
 	dealsCmd.AddCommand(dealsListCmd)
 	dealsCmd.AddCommand(dealsShowCmd)
 
@@ -191,20 +195,25 @@ Zero means no limits`,
 		{Name: "lotus-gateway-url", DefValue: "https://api.node.glif.io", Description: "Lotus gateway URL"},
 		{Name: "log-debug", DefValue: false, Description: "Enable debug level log"},
 		{Name: "log-json", DefValue: false, Description: "Enable structured logging"},
+		{Name: "log-plaintext", DefValue: false, Description: "Log in plain text instead of colorized. Useful when logging to syslog."},
 	}
 	daemonFlags = append(daemonFlags, peerflags.Flags...)
 	dealsFlags := []cli.Flag{{Name: "json", DefValue: false,
 		Description: "output in json format instead of tabular print"}}
 	dealsListFlags := []cli.Flag{{Name: "status", DefValue: "",
 		Description: "filter by auction statuses, separated by comma"}}
-
+	installServiceFlags := []cli.Flag{
+		{Name: "user", DefValue: "", Description: "The OS user the service will run as."},
+		{Name: "group", DefValue: "", Description: "The OS group the service will run as."}}
 	cobra.OnInitialize(func() {
 		v.SetConfigType("json")
 		v.SetConfigName("config")
 		v.AddConfigPath(os.Getenv("BIDBOT_PATH"))
 		v.AddConfigPath(defaultConfigPath)
 		err := v.ReadInConfig()
-		cli.CheckErrf(fmt.Sprintf("loading config from %s: %%v", v.ConfigFileUsed()), err)
+		if err != nil {
+			log.Errorf("loading config from %s: %v", v.ConfigFileUsed(), err)
+		}
 	})
 
 	cli.ConfigureCLI(v, "BIDBOT", commonFlags, rootCmd.PersistentFlags())
@@ -212,6 +221,7 @@ Zero means no limits`,
 	cli.ConfigureCLI(v, "BIDBOT", daemonFlags, daemonCmd.PersistentFlags())
 	cli.ConfigureCLI(v, "BIDBOT", dealsFlags, dealsCmd.PersistentFlags())
 	cli.ConfigureCLI(v, "BIDBOT", dealsListFlags, dealsListCmd.PersistentFlags())
+	cli.ConfigureCLI(v, "BIDBOT", installServiceFlags, installServiceCmd.PersistentFlags())
 }
 
 var rootCmd = &cobra.Command{
@@ -597,6 +607,41 @@ var resumeCmd = &cobra.Command{
 		cli.CheckErr(res.Body.Close())
 	}}
 
+var installServiceCmd = &cobra.Command{
+	Use:   "install-service",
+	Short: "Install bidbot as system service. Requires sudo.",
+	Args:  cobra.ExactArgs(0),
+	Run: func(c *cobra.Command, args []string) {
+		if runtime.GOOS != "linux" {
+			log.Fatal("only available in Linux")
+		}
+		exePath, err := os.Executable()
+		cli.CheckErr(err)
+		if os.Getuid() != 0 {
+			log.Fatalf("Try 'sudo %s install-service'.", exePath)
+		}
+
+		u, g := v.GetString("user"), v.GetString("group")
+		if u == "" || g == "" {
+			cli.CheckErr(errors.New("both --user and --group are required to install service."))
+		}
+		_, err = user.Lookup(u)
+		cli.CheckErrf("looking up user: %v", err)
+		_, err = user.LookupGroup(g)
+		cli.CheckErrf("looking up group: %v", err)
+
+		bidbotPath := path.Dir(v.ConfigFileUsed())
+		content := fmt.Sprintf(systemdServiceTemplate, u, g, exePath, bidbotPath)
+		loc := "/etc/systemd/system/bidbot.service"
+		err = os.WriteFile(loc, []byte(content), 0644)
+		cli.CheckErr(err)
+		cmd := exec.Command("systemctl", "enable", "bidbot")
+		cli.CheckErr(cmd.Run())
+		fmt.Printf(`Service installed to %s and was configured to start on system boot.
+To start the service right now, make sure the bidbot daemon is not running, and run "sudo systemctl start bidbot".
+`, loc)
+	}}
+
 func main() {
 	cli.CheckErr(rootCmd.Execute())
 }
@@ -644,3 +689,26 @@ func parseRunningBytesLimit(s string) (limiter.Limiter, error) {
 	log.Infof("limit total running bytes to %d bytes over %v", nBytes, d)
 	return limiter.NewRunningTotalLimiter(nBytes, d), nil
 }
+
+const systemdServiceTemplate = `[Unit]
+Description=Textile Bidbot
+# Wait for network AND daemon
+After=network-online.target
+
+[Service]
+Type=simple
+User=%s
+Group=%s
+LimitNOFILE=1024
+
+Restart=on-failure
+RestartSec=10
+
+ExecStart=%s daemon --log-plaintext
+StandardOutput=journal
+StandardError=journal
+Environment=BIDBOT_PATH=%s
+
+[Install]
+WantedBy=multi-user.target
+`
