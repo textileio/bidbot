@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -20,8 +21,7 @@ const (
 )
 
 var (
-	log              = golog.Logger("bidbot/pricing")
-	cidGravityAPIUrl = "https://api.cidgravity.com/api/integrations/bidbot"
+	log = golog.Logger("bidbot/pricing")
 	// Use cached rules if they are loaded no earlier than this period.
 	cidGravityCachePeriod = time.Minute
 )
@@ -29,6 +29,8 @@ var (
 type rawRules struct {
 	Blocked         bool
 	MaintenanceMode bool
+	DealRateLimit   int
+	CurrentDealRate int
 	PricingRules    []struct {
 		Verified    bool
 		MinSize     uint64 // bytes
@@ -40,14 +42,15 @@ type rawRules struct {
 }
 
 type cidGravityRules struct {
+	apiURL         string
 	apiKey         string
 	perClientRules map[string]*clientRules
 	lkRules        sync.Mutex
 }
 
 // NewCIDGravityRules returns PricingRules based on CID gravity configuration for the storage provider.
-func NewCIDGravityRules(apiKey string) PricingRules {
-	return &cidGravityRules{apiKey: apiKey, perClientRules: make(map[string]*clientRules)}
+func NewCIDGravityRules(apiURL, apiKey string) PricingRules {
+	return &cidGravityRules{apiURL: apiURL, apiKey: apiKey, perClientRules: make(map[string]*clientRules)}
 }
 
 // PricesFor looks up prices for the auction based on its client address.
@@ -55,7 +58,7 @@ func (cg *cidGravityRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices
 	cg.lkRules.Lock()
 	rules, exists := cg.perClientRules[auction.ClientAddress]
 	if !exists {
-		rules = newClientRulesFor(cg.apiKey, auction.ClientAddress)
+		rules = newClientRulesFor(cg.apiURL, cg.apiKey, auction.ClientAddress)
 	}
 	cg.perClientRules[auction.ClientAddress] = rules
 	cg.lkRules.Unlock()
@@ -63,16 +66,19 @@ func (cg *cidGravityRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices
 }
 
 type clientRules struct {
-	apiKey           string
-	clientAddress    string
-	rules            atomic.Value // *CIDGravityRules
-	rulesLastUpdated atomic.Value // time.Time
-	rulesETag        atomic.Value // string
-	lkLoadRules      sync.Mutex
+	apiURL            string
+	apiKey            string
+	clientAddress     string
+	rules             atomic.Value // *CIDGravityRules
+	rulesLastUpdated  atomic.Value // time.Time
+	rulesETag         atomic.Value // string
+	apiRateLimitReset atomic.Value // time.Time
+	lkLoadRules       sync.Mutex
 }
 
-func newClientRulesFor(apiKey, clientAddress string) *clientRules {
+func newClientRulesFor(apiURL, apiKey, clientAddress string) *clientRules {
 	rules := &clientRules{
+		apiURL:        apiURL,
 		apiKey:        apiKey,
 		clientAddress: clientAddress,
 	}
@@ -84,24 +90,31 @@ func newClientRulesFor(apiKey, clientAddress string) *clientRules {
 // auction. The rules are cached locally for some time. It returns valid = false if the cached rules were expired but
 // couldn't be reloaded from the CID gravity API in time.
 func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, valid bool) {
-	valid = cg.maybeReloadRules(cidGravityAPIUrl, cidGravityLoadRulesTimeout, cidGravityCachePeriod)
+	valid = cg.maybeReloadRules(cg.apiURL, cidGravityLoadRulesTimeout, cidGravityCachePeriod)
 	if !valid {
 		return
 	}
-	rules := cg.rules.Load()
+	var rules *rawRules
+
 	// preventive but should not happen
-	if rules == nil {
+	r := cg.rules.Load()
+	if r == nil {
 		valid = false
 		return
 	}
-	if rules.(*rawRules).Blocked {
+	rules = r.(*rawRules)
+
+	if rules.DealRateLimit > 0 && rules.CurrentDealRate >= rules.DealRateLimit {
 		return
 	}
-	if rules.(*rawRules).MaintenanceMode {
+	if rules.Blocked {
+		return
+	}
+	if rules.MaintenanceMode {
 		return
 	}
 	// rules are checked in sequence and the first match wins.
-	for _, r := range rules.(*rawRules).PricingRules {
+	for _, r := range rules.PricingRules {
 		if auction.DealSize >= r.MinSize && auction.DealSize <= r.MaxSize &&
 			auction.DealDuration >= r.MinDuration && auction.DealDuration <= r.MaxDuration {
 			if r.Verified && !prices.VerifiedPriceValid {
@@ -127,48 +140,17 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 	if time.Since(lastUpdated) < cachePeriod {
 		return true
 	}
+	if t := cg.apiRateLimitReset.Load(); t != nil {
+		reset := t.(time.Time)
+		if time.Now().Before(reset) {
+			log.Infof("API rate limit won't reset until: %v", reset)
+			return false
+		}
+	}
 	// use buffered channel to avoid blocking the goroutine when the receiver is gone.
 	chErr := make(chan error, 1)
 	go func() {
-		err := func() error {
-			body := fmt.Sprintf(`{"clientAddress":"%s"}`, cg.clientAddress)
-			req, err := http.NewRequest(http.MethodGet, url, strings.NewReader(body))
-			if err != nil {
-				return fmt.Errorf("creating HTTP request: %v", err)
-			}
-			req.Header.Set("Authorization", cg.apiKey)
-			etag := cg.rulesETag.Load()
-			if etag != nil {
-				req.Header.Set("If-None-Match", etag.(string))
-			}
-			start := time.Now()
-			resp, err := http.DefaultClient.Do(req)
-			log.Infof("loading rules from API took %v", time.Since(start))
-			if err != nil {
-				return fmt.Errorf("contacting CID gravity server: %v", err)
-			}
-			switch resp.StatusCode {
-			case http.StatusOK:
-				// proceed
-			case http.StatusNotModified:
-				return nil
-			default:
-				return fmt.Errorf("unexpected HTTP status '%v'", resp.Status)
-			}
-			cg.rulesETag.Store(resp.Header.Get("ETag"))
-			defer func() { _ = resp.Body.Close() }()
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return fmt.Errorf("reading http response: %v", err)
-			}
-			var rules rawRules
-			if err := json.Unmarshal(b, &rules); err != nil {
-				return fmt.Errorf("unmarshalling rules: %v", err)
-			}
-			cg.rules.Store(&rules)
-			cg.rulesLastUpdated.Store(time.Now())
-			return nil
-		}()
+		err := cg.loadRules(url)
 		if err != nil {
 			log.Errorf("loading rules from API: %v", err)
 		}
@@ -183,4 +165,56 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 	case <-time.After(timeout):
 	}
 	return false
+}
+
+func (cg *clientRules) loadRules(url string) error {
+	body := fmt.Sprintf(`{"clientAddress":"%s"}`, cg.clientAddress)
+	req, err := http.NewRequest(http.MethodGet, url, strings.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("creating HTTP request: %v", err)
+	}
+	req.Header.Set("Authorization", cg.apiKey)
+	etag := cg.rulesETag.Load()
+	if etag != nil {
+		req.Header.Set("If-None-Match", etag.(string))
+	}
+	start := time.Now()
+	resp, err := http.DefaultClient.Do(req)
+	log.Infof("loading rules from API took %v", time.Since(start))
+	if err != nil {
+		return fmt.Errorf("contacting CID gravity server: %v", err)
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// proceed
+	case http.StatusNotModified:
+		return nil
+	case http.StatusTooManyRequests:
+		reset := resp.Header.Get("X-Ratelimit-Reset")
+		ts, err := strconv.ParseInt(reset, 10, 0)
+		if err != nil {
+			return fmt.Errorf("parsing X-Ratelimit-Reset: %v", err)
+		}
+		t := time.Unix(ts, 0)
+		cg.apiRateLimitReset.Store(t)
+		return fmt.Errorf("CID gravity API rate limit is hit: %s/%s, won't reset until %v",
+			resp.Header.Get("X-Ratelimit-Remaining"),
+			resp.Header.Get("X-Ratelimit-Limit"),
+			t)
+	default:
+		return fmt.Errorf("unexpected HTTP status '%v'", resp.Status)
+	}
+	cg.rulesETag.Store(resp.Header.Get("ETag"))
+	defer func() { _ = resp.Body.Close() }()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading http response: %v", err)
+	}
+	var rules rawRules
+	if err := json.Unmarshal(b, &rules); err != nil {
+		return fmt.Errorf("unmarshalling rules: %v", err)
+	}
+	cg.rules.Store(&rules)
+	cg.rulesLastUpdated.Store(time.Now())
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 )
 
 func TestPriceFor(t *testing.T) {
-	cidGravityAPIUrl = "http://localhost:invalid" // do not care about rules loading
 	cidGravityCachePeriod = time.Second
 	rules := &rawRules{
 		PricingRules: []struct {
@@ -62,7 +62,7 @@ func TestPriceFor(t *testing.T) {
 		DealSize:      1,
 		DealDuration:  1,
 	}
-	cg := newClientRulesFor("key", auction.ClientAddress)
+	cg := newClientRulesFor("http://localhost:invalid", "key", auction.ClientAddress)
 
 	rp, valid := cg.PricesFor(auction)
 	assert.False(t, valid, "prices should be invalid before the rules are loaded")
@@ -93,6 +93,20 @@ func TestPriceFor(t *testing.T) {
 	assert.True(t, rp.VerifiedPriceValid)
 	assert.Equal(t, int64(100), rp.VerifiedPrice)
 
+	// start testing other flags like deal rate, blocked etc
+	rules.DealRateLimit = 100
+	rp, valid = cg.PricesFor(auction)
+	assert.True(t, valid)
+	assert.True(t, rp.UnverifiedPriceValid)
+	assert.True(t, rp.VerifiedPriceValid)
+
+	rules.CurrentDealRate = rules.DealRateLimit
+	rp, valid = cg.PricesFor(auction)
+	assert.True(t, valid)
+	assert.False(t, rp.UnverifiedPriceValid)
+	assert.False(t, rp.VerifiedPriceValid)
+
+	rules.CurrentDealRate = 0
 	rules.MaintenanceMode = true
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
@@ -112,7 +126,7 @@ func TestPriceFor(t *testing.T) {
 }
 
 func TestMaybeReloadRules(t *testing.T) {
-	cg := newClientRulesFor("key", "pk")
+	cg := newClientRulesFor("http://localhost:invalid", "key", "pk")
 	apiResponse := []byte(`{
 	     "pricingRules": [
 		     {
@@ -125,7 +139,9 @@ func TestMaybeReloadRules(t *testing.T) {
 		     }
 		 ],
 		"blocked": false,
-		"maintenanceMode": false
+		"maintenanceMode": false,
+		"dealRateLimit": 50,
+		"currentDealRate": 0
     }`)
 	for _, testCase := range []struct {
 		name         string
@@ -177,5 +193,29 @@ func TestMaybeReloadRules(t *testing.T) {
 		assert.True(t,
 			cg.rules.Load().(*rawRules).MaintenanceMode,
 			"should have loaded the new rules")
+	})
+	t.Run("API rate limit", func(t *testing.T) {
+		reqs := 0
+		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			if reqs == 0 {
+				rw.Header().Set("X-Ratelimit-Limit", "1")
+				rw.Header().Set("X-Ratelimit-Remaining", "0")
+				rw.Header().Set("X-Ratelimit-Reset", strconv.FormatInt(time.Now().Add(time.Second).Unix(), 10))
+				rw.WriteHeader(http.StatusTooManyRequests)
+			} else {
+				response, _ := json.Marshal(rawRules{MaintenanceMode: true})
+				_, _ = rw.Write(response)
+			}
+			reqs++
+		}))
+		timeout := time.Millisecond
+		valid := cg.maybeReloadRules(server.URL, timeout, 0)
+		require.False(t, valid, "limit is hit")
+		time.Sleep(10 * time.Millisecond)
+		valid = cg.maybeReloadRules(server.URL, timeout, 0)
+		require.False(t, valid, "shouldn't hit API again until reset time")
+		time.Sleep(time.Second)
+		valid = cg.maybeReloadRules(server.URL, timeout, 0)
+		require.True(t, valid, "should hit API again after reset time")
 	})
 }
