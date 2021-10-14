@@ -26,6 +26,7 @@ type Service interface {
 	ListBids(query bidstore.Query) ([]*bidstore.Bid, error)
 	GetBid(id auction.BidID) (*bidstore.Bid, error)
 	WriteDataURI(payloadCid, uri string) (string, error)
+	SetPaused(paused bool)
 }
 
 // NewServer returns a new http server for bidbot commands.
@@ -49,6 +50,8 @@ func createMux(service Service) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", getOnly(healthHandler))
 	mux.HandleFunc("/id", getOnly(idHandler(service)))
+	mux.HandleFunc("/pause", putOnly(pauseHandler(service)))
+	mux.HandleFunc("/resume", putOnly(resumeHandler(service)))
 	mux.HandleFunc("/version", getOnly(versionHandler))
 	// allow both with and without trailing slash
 	deals := getOnly(dealsHandler(service))
@@ -61,9 +64,18 @@ func createMux(service Service) *http.ServeMux {
 }
 
 func getOnly(f http.HandlerFunc) http.HandlerFunc {
+	return methodOnly(http.MethodGet, f)
+}
+
+func putOnly(f http.HandlerFunc) http.HandlerFunc {
+	return methodOnly(http.MethodPut, f)
+}
+
+func methodOnly(method string, f http.HandlerFunc) http.HandlerFunc {
+	msg := fmt.Sprintf("only %s method is allowed", method)
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			httpError(w, "only GET method is allowed", http.StatusBadRequest)
+		if r.Method != method {
+			httpError(w, msg, http.StatusBadRequest)
 			return
 		}
 		f(w, r)
@@ -90,6 +102,20 @@ func idHandler(service Service) http.HandlerFunc {
 		if err != nil {
 			log.Errorf("write failed: %v", err)
 		}
+	}
+}
+
+func pauseHandler(service Service) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		service.SetPaused(true)
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func resumeHandler(service Service) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		service.SetPaused(false)
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

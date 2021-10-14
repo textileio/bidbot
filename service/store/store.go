@@ -571,20 +571,6 @@ func (s *Store) enqueueDataURI(txn ds.Txn, b *Bid) error {
 func (s *Store) fetchWorker(num int) {
 	defer s.wg.Done()
 
-	fail := func(b *Bid, err error) (status BidStatus) {
-		b.ErrorCause = err.Error()
-		if b.DataURIFetchAttempts >= s.dealDataFetchAttempts {
-			status = BidStatusErrored
-			s.bytesLimiter.Withdraw(string(b.AuctionID))
-			s.dealProgressReporter.Errored(b.ID, b.ErrorCause)
-			log.Warnf("job %s exhausted all %d attempts with error: %v", b.ID, s.dealDataFetchAttempts, err)
-		} else {
-			status = BidStatusQueuedData
-			log.Debugf("retrying job %s with error: %v", b.ID, err)
-		}
-		return status
-	}
-
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -594,62 +580,12 @@ func (s *Store) fetchWorker(num int) {
 			if s.ctx.Err() != nil {
 				return
 			}
-			log.Infof("fetching sources %s", b.Sources)
 			b.DataURIFetchAttempts++
-			log.Debugf(
-				"worker %d got job %s (attempt=%d/%d)", num, b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
-
-			var status BidStatus
-			if chainHeight, err := s.fc.GetChainHeight(); err == nil && b.StartEpoch < chainHeight {
-				log.Errorf("deal %v's start epoch %v is before current chain height %v",
-					b.ProposalCid.String(), b.StartEpoch, chainHeight)
-				status = fail(b, errors.New("deal is expired"))
-			} else {
-				var logMsg string
-				// Fetch the data cid
-				s.dealProgressReporter.StartFetching(b.ID, b.DataURIFetchAttempts)
-				file, err := s.WriteDealData(b)
-				if err != nil {
-					s.dealProgressReporter.ErrorFetching(b.ID, b.DataURIFetchAttempts, err)
-					status = fail(b, err)
-					logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
-				} else {
-					log.Infof("importing %s to lotus with proposal cid %s", file, b.ProposalCid)
-
-					// if requested, limit the number of concurrent imports
-					if s.semImports != nil {
-						// the error returned by Acquire is
-						// always ctx.Err(), in this case never
-						// happens.
-						_ = s.semImports.Acquire(context.Background(), 1)
-					}
-					s.dealProgressReporter.StartImporting(b.ID, b.DataURIFetchAttempts)
-					err = s.lc.ImportData(b.ProposalCid, file)
-					if s.semImports != nil {
-						s.semImports.Release(1)
-					}
-
-					s.dealProgressReporter.EndImporting(b.ID, b.DataURIFetchAttempts, err)
-					if err != nil {
-						status = fail(b, err)
-						logMsg = fmt.Sprintf("status=%s error=%s", status, b.ErrorCause)
-					} else {
-						status = BidStatusFinalized
-						s.bytesLimiter.Commit(string(b.AuctionID))
-						s.dealProgressReporter.Finalized(b.ID)
-						// Reset error
-						b.ErrorCause = ""
-						logMsg = fmt.Sprintf("status=%s", status)
-					}
-				}
-				log.Infof("finished fetching data cid %s (%s)", b.ID, logMsg)
-			}
-
-			// Save and update status to "finalized"
+			log.Debugf("worker %d got job %s (attempt=%d/%d)", num, b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
+			status := s.fetchOne(b)
 			if err := s.saveAndTransitionStatus(nil, b, status); err != nil {
-				log.Errorf("updating status (%s): %v", status, err)
+				log.Errorf("updating status for bid %s (%s): %v", b.ID, status, err)
 			}
-
 			log.Debugf("worker %d finished job %s", num, b.ID)
 			select {
 			case s.tickCh <- struct{}{}:
@@ -657,6 +593,63 @@ func (s *Store) fetchWorker(num int) {
 			}
 		}
 	}
+}
+
+func (s *Store) fetchOne(b *Bid) BidStatus {
+	if chainHeight, err := s.fc.GetChainHeight(); err == nil && b.StartEpoch < chainHeight {
+		log.Errorf("bid %s start epoch %v is before current chain height %v", b.ID, b.StartEpoch, chainHeight)
+		return s.fail(b, errors.New("deal is expired"), true)
+	}
+	// Fetch the data cid
+	log.Infof("fetching sources for bid %s: %s", b.ID, b.Sources)
+	s.dealProgressReporter.StartFetching(b.ID, b.DataURIFetchAttempts)
+	file, err := s.WriteDealData(b)
+	if err != nil {
+		s.dealProgressReporter.ErrorFetching(b.ID, b.DataURIFetchAttempts, err)
+		status := s.fail(b, err, false)
+		log.Errorf("fetching sources for bid %s: status=%s error=%s", b.ID, status, b.ErrorCause)
+		return status
+	}
+
+	log.Infof("bid %s: importing %s to lotus with proposal cid %s", b.ID, file, b.ProposalCid)
+	s.dealProgressReporter.StartImporting(b.ID, b.DataURIFetchAttempts)
+	// if configured, limit the number of concurrent imports
+	if s.semImports != nil {
+		// the error returned by Acquire is always ctx.Err(), in this case never happens.
+		_ = s.semImports.Acquire(context.Background(), 1)
+	}
+	err = s.lc.ImportData(b.ProposalCid, file)
+	if s.semImports != nil {
+		s.semImports.Release(1)
+	}
+	s.dealProgressReporter.EndImporting(b.ID, b.DataURIFetchAttempts, err)
+	if err != nil {
+		status := s.fail(b, err, false)
+		log.Errorf("importing data for bid %s: status=%s error=%s", b.ID, status, b.ErrorCause)
+		return status
+	}
+
+	s.bytesLimiter.Commit(string(b.AuctionID))
+	s.dealProgressReporter.Finalized(b.ID)
+	// Reset error
+	b.ErrorCause = ""
+	status := BidStatusFinalized
+	log.Infof("finished importing data for bid %s, status=%s", b.ID, status)
+	return status
+}
+
+func (s *Store) fail(b *Bid, err error, immediate bool) (status BidStatus) {
+	b.ErrorCause = err.Error()
+	if immediate || b.DataURIFetchAttempts >= s.dealDataFetchAttempts {
+		status = BidStatusErrored
+		s.bytesLimiter.Withdraw(string(b.AuctionID))
+		s.dealProgressReporter.Errored(b.ID, b.ErrorCause)
+		log.Warnf("job %s exhausted all %d attempts with error: %v", b.ID, s.dealDataFetchAttempts, err)
+	} else {
+		status = BidStatusQueuedData
+		log.Debugf("retrying job %s with error: %v", b.ID, err)
+	}
+	return status
 }
 
 func (s *Store) startFetching() {

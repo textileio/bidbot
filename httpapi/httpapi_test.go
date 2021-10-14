@@ -154,6 +154,10 @@ func (s *mockService) PeerInfo() (*peer.Info, error) {
 	panic("not implemented")
 }
 
+func (s *mockService) SetPaused(paused bool) {
+	panic("not implemented")
+}
+
 func (s *mockService) GetBid(id auction.BidID) (*bidstore.Bid, error) {
 	args := s.Called(id)
 	if args.Get(0) == nil {
