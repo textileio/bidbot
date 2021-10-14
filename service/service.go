@@ -305,7 +305,7 @@ func (s *Service) isPaused() bool {
 // AuctionsHandler implements MessageHandler.
 func (s *Service) AuctionsHandler(from core.ID, a *pb.Auction) error {
 	if s.isPaused() {
-		log.Info("not bidding because bidbot is paused")
+		log.Info("not bidding when bidbot is paused")
 		return nil
 	}
 	ajson, err := json.MarshalIndent(a, "", "  ")
