@@ -195,7 +195,8 @@ Zero means no limits`,
 		{Name: "lotus-gateway-url", DefValue: "https://api.node.glif.io", Description: "Lotus gateway URL"},
 		{Name: "log-debug", DefValue: false, Description: "Enable debug level log"},
 		{Name: "log-json", DefValue: false, Description: "Enable structured logging"},
-		{Name: "log-plaintext", DefValue: false, Description: "Log in plain text instead of colorized. Useful when logging to syslog."},
+		{Name: "log-plaintext", DefValue: false,
+			Description: "Log in plain text instead of colorized. Useful when logging to syslog."},
 	}
 	daemonFlags = append(daemonFlags, peerflags.Flags...)
 	dealsFlags := []cli.Flag{{Name: "json", DefValue: false,
@@ -609,21 +610,21 @@ var resumeCmd = &cobra.Command{
 
 var installServiceCmd = &cobra.Command{
 	Use:   "install-service",
-	Short: "Install bidbot as system service. Requires sudo.",
+	Short: "Install bidbot as systemd service. Requires sudo.",
 	Args:  cobra.ExactArgs(0),
 	Run: func(c *cobra.Command, args []string) {
 		if runtime.GOOS != "linux" {
-			log.Fatal("only available in Linux")
+			log.Fatal("only available on Linux with systemd.")
 		}
 		exePath, err := os.Executable()
 		cli.CheckErr(err)
 		if os.Getuid() != 0 {
-			log.Fatalf("Try 'sudo %s install-service'.", exePath)
+			log.Fatalf("try 'sudo %s install-service'.", exePath)
 		}
 
 		u, g := v.GetString("user"), v.GetString("group")
 		if u == "" || g == "" {
-			cli.CheckErr(errors.New("both --user and --group are required to install service."))
+			log.Fatal("both --user and --group are required to install service.")
 		}
 		_, err = user.Lookup(u)
 		cli.CheckErrf("looking up user: %v", err)
