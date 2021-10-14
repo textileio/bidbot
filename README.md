@@ -185,6 +185,8 @@ If you have `bidbot` daemon running, we recommend you explore the following avai
 - `bidbot download <payload-cid> <data-uri>`: This command allows you to download a CAR file to the `bidbot` download folder. This can be helpful to test downloads or manually re-download a particular CAR from a won auction (if that's necessary).
 - `bidbot deals list`: This command shows you a list of your won auctions and some summary of which stage you're in the process.
 - `bidbot deals show <bid-id>`: This command shows detailed information about a won auction.
+- `bidbot pause` and `bidbot resume`: Useful when you use script to manage your miner load.
+- `bidbot install-service`: Install bidbot as a systemd service. Need to run with `sudo`.
 
 Do you think `bidbot` can have other commands that would make your life easier? We're interested in knowing about that!
 
