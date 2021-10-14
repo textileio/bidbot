@@ -54,6 +54,7 @@ var (
 	dealsListFields = []string{"ID", "DealSize", "DealDuration", "Status", "AskPrice", "VerifiedAskPrice",
 		"StartEpoch", "DataURIFetchAttempts", "CreatedAt", "ClientAddress", "ErrorCause"}
 	validStorageProviderID = regexp.MustCompile("^[a-z]0[0-9]+$")
+	cidGravityURL          = "https://api.cidgravity.com/api/integrations/bidbot"
 )
 
 func init() {
@@ -409,7 +410,7 @@ var daemonCmd = &cobra.Command{
 			PricingRulesStrict:  v.GetBool("cid-gravity-strict"),
 		}
 		if cidGravityKey := v.GetString("cid-gravity-key"); cidGravityKey != "" {
-			config.PricingRules = pricing.NewCIDGravityRules(cidGravityKey)
+			config.PricingRules = pricing.NewCIDGravityRules(cidGravityURL, cidGravityKey)
 		}
 
 		serv, err := service.New(config, store, lc, fc)
