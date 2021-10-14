@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/ipfs/go-cid"
@@ -154,6 +155,7 @@ type Service struct {
 	lc          lotusclient.LotusClient
 	store       *bidstore.Store
 
+	paused              int32 // atomic. 1 == paused; 0 == not paused
 	bidParams           BidParams
 	auctionFilters      AuctionFilters
 	bytesLimiter        limiter.Limiter
@@ -287,8 +289,25 @@ func (s *Service) WriteDataURI(payloadCid, uri string) (string, error) {
 	return s.store.WriteDataURI("", payloadCid, uri, 0)
 }
 
+// SetPaused sets the service state to pause bidding or not.
+func (s *Service) SetPaused(paused bool) {
+	var v int32
+	if paused {
+		v = 1
+	}
+	atomic.StoreInt32(&s.paused, v)
+}
+
+func (s *Service) isPaused() bool {
+	return atomic.LoadInt32(&s.paused) == 1
+}
+
 // AuctionsHandler implements MessageHandler.
 func (s *Service) AuctionsHandler(from core.ID, a *pb.Auction) error {
+	if s.isPaused() {
+		log.Info("not bidding because bidbot is paused")
+		return nil
+	}
 	ajson, err := json.MarshalIndent(a, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshaling json: %v", err)

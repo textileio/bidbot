@@ -169,7 +169,9 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 			cg.rulesLastUpdated.Store(time.Now())
 			return nil
 		}()
-		log.Errorf("loading rules from API: %v", err)
+		if err != nil {
+			log.Errorf("loading rules from API: %v", err)
+		}
 		chErr <- err
 		close(chErr)
 	}()

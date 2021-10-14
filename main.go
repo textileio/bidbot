@@ -61,7 +61,7 @@ func init() {
 	}
 	_ = godotenv.Load(filepath.Join(configPath, ".env"))
 
-	rootCmd.AddCommand(initCmd, daemonCmd, idCmd, versionCmd, dealsCmd, downloadCmd)
+	rootCmd.AddCommand(initCmd, daemonCmd, idCmd, versionCmd, dealsCmd, downloadCmd, pauseCmd, resumeCmd)
 	dealsCmd.AddCommand(dealsListCmd)
 	dealsCmd.AddCommand(dealsShowCmd)
 
@@ -572,6 +572,30 @@ Deal data is written to BIDBOT_DEAL_DATA_DIRECTORY in CAR format.
 		}
 	},
 }
+
+var pauseCmd = &cobra.Command{
+	Use:   "pause",
+	Short: "Pause bidding in auctions. No effect if already paused.",
+	Args:  cobra.ExactArgs(0),
+	Run: func(c *cobra.Command, args []string) {
+		req, err := http.NewRequest(http.MethodPut, urlFor("pause"), nil)
+		cli.CheckErr(err)
+		res, err := http.DefaultClient.Do(req)
+		cli.CheckErr(err)
+		cli.CheckErr(res.Body.Close())
+	}}
+
+var resumeCmd = &cobra.Command{
+	Use:   "resume",
+	Short: "Resume bidding in auctions. No effect if no paused.",
+	Args:  cobra.ExactArgs(0),
+	Run: func(c *cobra.Command, args []string) {
+		req, err := http.NewRequest(http.MethodPut, urlFor("resume"), nil)
+		cli.CheckErr(err)
+		res, err := http.DefaultClient.Do(req)
+		cli.CheckErr(err)
+		cli.CheckErr(res.Body.Close())
+	}}
 
 func main() {
 	cli.CheckErr(rootCmd.Execute())
