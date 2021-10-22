@@ -63,8 +63,8 @@ Storage providers will send *bids* to show their interest in participating in th
 
 The Auctioneer collects all bids from connected storage providers and chooses one or multiple winners. The winning algorithm aims to maximize deal success rate for storage clients, while being fair to all storage providers, big or small, new or established. It is open and subject to continuous evolving based on community feedback. Anyone can join the biweekly [Auction Governance meeting](https://textile.notion.site/Auction-Governance-2eb1acae8a204b6e8dbf72752255a008) to contribute. As a rules of thumb, you can expect that the following facts will help winning an auction:
 
--- Provide a low price per epoch. Verified deals need to be zero-priced for now.
--- Provide a low DealStartEpoch, and confirm the winning deal on chain as quick as possible.
+- Provide a low price per epoch. Verified deals need to be zero-priced for now.
+- Provide a low DealStartEpoch, and confirm the winning deal on chain as quick as possible.
 - Maintain a high deal success from past auctions.
 
 If you win an auction, you will be notified about it! If that weren't the case, most probably you'll have better luck in the next auction!
