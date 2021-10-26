@@ -66,6 +66,7 @@ func TestPriceFor(t *testing.T) {
 
 	rp, valid := cg.PricesFor(auction)
 	assert.False(t, valid, "prices should be invalid before the rules are loaded")
+	assert.False(t, rp.AllowBidding)
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.False(t, rp.VerifiedPriceValid)
 
@@ -73,6 +74,7 @@ func TestPriceFor(t *testing.T) {
 	cg.rulesLastUpdated.Store(time.Now())
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.True(t, rp.AllowBidding)
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.True(t, rp.VerifiedPriceValid)
 	assert.Equal(t, int64(1), rp.VerifiedPrice)
@@ -80,6 +82,7 @@ func TestPriceFor(t *testing.T) {
 	auction.DealSize = 2 << 30
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.True(t, rp.AllowBidding)
 	assert.True(t, rp.UnverifiedPriceValid)
 	assert.Equal(t, int64(10), rp.UnverifiedPrice)
 	assert.True(t, rp.VerifiedPriceValid)
@@ -88,6 +91,7 @@ func TestPriceFor(t *testing.T) {
 	auction.DealDuration = 2 << 20
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.True(t, rp.AllowBidding)
 	assert.True(t, rp.UnverifiedPriceValid)
 	assert.Equal(t, int64(1000), rp.UnverifiedPrice)
 	assert.True(t, rp.VerifiedPriceValid)
@@ -97,12 +101,14 @@ func TestPriceFor(t *testing.T) {
 	rules.DealRateLimit = 100
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.True(t, rp.AllowBidding)
 	assert.True(t, rp.UnverifiedPriceValid)
 	assert.True(t, rp.VerifiedPriceValid)
 
 	rules.CurrentDealRate = rules.DealRateLimit
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.False(t, rp.AllowBidding)
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.False(t, rp.VerifiedPriceValid)
 
@@ -110,6 +116,7 @@ func TestPriceFor(t *testing.T) {
 	rules.MaintenanceMode = true
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.False(t, rp.AllowBidding)
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.False(t, rp.VerifiedPriceValid)
 
@@ -117,6 +124,7 @@ func TestPriceFor(t *testing.T) {
 	rules.Blocked = true
 	rp, valid = cg.PricesFor(auction)
 	assert.True(t, valid)
+	assert.False(t, rp.AllowBidding)
 	assert.False(t, rp.UnverifiedPriceValid)
 	assert.False(t, rp.VerifiedPriceValid)
 

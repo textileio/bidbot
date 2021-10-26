@@ -355,7 +355,14 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 
 	prices, valid := s.pricingRules.PricesFor(a)
 	log.Infof("pricing engine result valid for auction %s?: %v, details: %+v", a.Id, valid, prices)
-	if !valid && s.pricingRulesStrict {
+	if !valid {
+		// fail to load rules, allow bidding unless pricingRulesStrict is set.
+		if s.pricingRulesStrict {
+			return nil
+		}
+		prices.AllowBidding = true
+	}
+	if !prices.AllowBidding {
 		return nil
 	}
 	if !prices.UnverifiedPriceValid {
