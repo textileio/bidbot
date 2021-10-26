@@ -113,6 +113,7 @@ func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, va
 	if rules.MaintenanceMode {
 		return
 	}
+	prices.AllowBidding = true
 	// rules are checked in sequence and the first match wins.
 	for _, r := range rules.PricingRules {
 		if auction.DealSize >= r.MinSize && auction.DealSize <= r.MaxSize &&

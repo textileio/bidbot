@@ -4,6 +4,7 @@ import pb "github.com/textileio/bidbot/gen/v1"
 
 // ResolvedPrices represents the result after matching an auction through the pricing rules.
 type ResolvedPrices struct {
+	AllowBidding         bool
 	UnverifiedPriceValid bool
 	UnverifiedPrice      int64
 	VerifiedPriceValid   bool
