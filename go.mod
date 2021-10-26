@@ -38,7 +38,7 @@ require (
 	github.com/textileio/crypto v0.0.0-20210929130053-08edebc3361a
 	github.com/textileio/go-datastore-extensions v1.0.1
 	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
-	github.com/textileio/go-libp2p-pubsub-rpc v0.0.0-00010101000000-000000000000
+	github.com/textileio/go-libp2p-pubsub-rpc v0.0.6-0.20211026211639-6100384b5476
 	github.com/textileio/go-log/v2 v2.1.3-gke-2
 	github.com/urfave/cli/v2 v2.3.0 // indirect
 	go.opentelemetry.io/otel/metric v0.21.0
@@ -46,8 +46,4 @@ require (
 	google.golang.org/protobuf v1.27.1
 )
 
-replace github.com/textileio/go-libp2p-pubsub-rpc => ../go-libp2p-pubsub-rpc
-
 replace github.com/kilic/bls12-381 => github.com/kilic/bls12-381 v0.0.0-20200820230200-6b2c19996391
-
-//replace github.com/ipfs/go-ipns => github.com/ipfs/go-ipns v0.0.2
