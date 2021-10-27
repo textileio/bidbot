@@ -88,11 +88,6 @@ var Flags = []cli.Flag{
 		DefValue:    false,
 		Description: "Enable MDNS peer discovery",
 	},
-	{
-		Name:        "mdns-interval",
-		DefValue:    1,
-		Description: "MDNS peer discovery interval in seconds",
-	},
 }
 
 // GetConfig returns a Config from a *viper.Viper instance.
@@ -128,7 +123,6 @@ func GetConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string, isAuctioneer
 		EnableQUIC:               v.GetBool("quic"),
 		EnableNATPortMap:         v.GetBool("nat"),
 		EnableMDNS:               v.GetBool("mdns"),
-		MDNSIntervalSeconds:      v.GetInt("mdns-interval"),
 		EnablePubSubPeerExchange: isAuctioneer,
 		EnablePubSubFloodPublish: true,
 	}, nil
