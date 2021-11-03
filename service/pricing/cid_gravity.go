@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -24,6 +23,8 @@ var (
 	log = golog.Logger("bidbot/pricing")
 	// Use cached rules if they are loaded no earlier than this period.
 	cidGravityCachePeriod = time.Minute
+	// Backoff time when a status-code 429 is returned.
+	backoff429 = time.Minute * 5
 )
 
 type rawRules struct {
@@ -66,14 +67,14 @@ func (cg *cidGravityRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices
 }
 
 type clientRules struct {
-	apiURL            string
-	apiKey            string
-	clientAddress     string
-	rules             atomic.Value // *CIDGravityRules
-	rulesLastUpdated  atomic.Value // time.Time
-	rulesETag         atomic.Value // string
-	apiRateLimitReset atomic.Value // time.Time
-	lkLoadRules       sync.Mutex
+	apiURL             string
+	apiKey             string
+	clientAddress      string
+	rules              atomic.Value // *CIDGravityRules
+	rulesLastUpdated   atomic.Value // time.Time
+	rulesETag          atomic.Value // string
+	apiThrottlingReset atomic.Value // time.Time
+	lkLoadRules        sync.Mutex
 }
 
 func newClientRulesFor(apiURL, apiKey, clientAddress string) *clientRules {
@@ -141,9 +142,9 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 	if time.Since(lastUpdated) < cachePeriod {
 		return true
 	}
-	if t := cg.apiRateLimitReset.Load(); t != nil {
+	if t := cg.apiThrottlingReset.Load(); t != nil {
 		reset := t.(time.Time)
-		if time.Now().Before(reset) {
+		if !reset.IsZero() && time.Now().Before(reset) {
 			log.Infof("API rate limit won't reset until: %v", reset)
 			return false
 		}
@@ -185,23 +186,17 @@ func (cg *clientRules) loadRules(url string) error {
 	if err != nil {
 		return fmt.Errorf("contacting CID gravity server: %v", err)
 	}
+
+	cg.apiThrottlingReset.Store(time.Time{})
 	switch resp.StatusCode {
 	case http.StatusOK:
 		// proceed
 	case http.StatusNotModified:
 		return nil
 	case http.StatusTooManyRequests:
-		reset := resp.Header.Get("X-Ratelimit-Reset")
-		ts, err := strconv.ParseInt(reset, 10, 0)
-		if err != nil {
-			return fmt.Errorf("parsing X-Ratelimit-Reset: %v", err)
-		}
-		t := time.Unix(ts, 0)
-		cg.apiRateLimitReset.Store(t)
-		return fmt.Errorf("CID gravity API rate limit is hit: %s/%s, won't reset until %v",
-			resp.Header.Get("X-Ratelimit-Remaining"),
-			resp.Header.Get("X-Ratelimit-Limit"),
-			t)
+		t := time.Now().Add(backoff429)
+		cg.apiThrottlingReset.Store(t)
+		return fmt.Errorf("CID gravity API rate limit is hit, backoff until %v", t)
 	default:
 		return fmt.Errorf("unexpected HTTP status '%v'", resp.Status)
 	}

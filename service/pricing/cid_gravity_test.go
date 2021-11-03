@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 	"time"
 
@@ -204,11 +203,9 @@ func TestMaybeReloadRules(t *testing.T) {
 	})
 	t.Run("API rate limit", func(t *testing.T) {
 		reqs := 0
+		backoff429 = time.Millisecond * 100
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if reqs == 0 {
-				rw.Header().Set("X-Ratelimit-Limit", "1")
-				rw.Header().Set("X-Ratelimit-Remaining", "0")
-				rw.Header().Set("X-Ratelimit-Reset", strconv.FormatInt(time.Now().Add(time.Second).Unix(), 10))
 				rw.WriteHeader(http.StatusTooManyRequests)
 			} else {
 				response, _ := json.Marshal(rawRules{MaintenanceMode: true})
