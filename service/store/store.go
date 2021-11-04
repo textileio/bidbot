@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/facebookgo/symwalk"
 	"github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
@@ -32,7 +33,7 @@ import (
 
 const (
 	// gcInterval specifies how often to run the periodical garbage collector.
-	gcInterval = time.Minute // TODO(jsign): remove temporal change while is a PR
+	gcInterval = time.Second * 30 // TODO(jsign): remove temporal change while is a PR
 	// defaultListLimit is the default list page size.
 	defaultListLimit = 10
 	// maxListLimit is the max list page size.
@@ -741,7 +742,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 		}
 		return nil
 	}
-	err = filepath.Walk(s.dealDataDirectory, walk)
+	err = symwalk.Walk(s.dealDataDirectory, walk)
 	if err != nil {
 		log.Errorf("error walking deal data directory: %v", err)
 	}
