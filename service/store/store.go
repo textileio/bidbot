@@ -720,7 +720,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 			return nil
 		}
 		if info.IsDir() {
-			log.Infof("gc ignoring symlink file %s", path)
+			log.Infof("gc ignoring directory %s", path)
 			return nil
 		}
 		filesEvaluated++
