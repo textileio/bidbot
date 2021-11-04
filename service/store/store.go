@@ -674,15 +674,15 @@ func (s *Store) periodicalGC(discardOrphanDealsAfter time.Duration) {
 			return
 		}
 		start := time.Now()
-		bidsRemoved, filesRemoved := s.GC(discardOrphanDealsAfter)
-		log.Infof("GC finished in %v: %d orphan deals cleaned, %d deal data files cleaned",
-			time.Since(start), bidsRemoved, filesRemoved)
+		bidsRemoved, filesRemoved, evaluated := s.GC(discardOrphanDealsAfter)
+		log.Infof("GC finished in %v: %d orphan deals cleaned, %d deal data files cleaned, %d files evaluated",
+			time.Since(start), bidsRemoved, filesRemoved, evaluated)
 	}
 }
 
 // GC cleans up deal data files, if discardOrphanDealsAfter is not zero, it
 // also removes bids staying at BidStatusAwaitingProposal for that longer.
-func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRemoved int) {
+func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRemoved, filesEvaluated int) {
 	bids, err := s.ListBids(Query{})
 	if err != nil {
 		log.Errorf("listing bids: %v", err)
@@ -722,6 +722,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 			log.Infof("gc ignoring symlink file %s", path)
 			return nil
 		}
+		filesEvaluated++
 		shouldRemove := false
 		if _, exists := removeFiles[path]; exists {
 			shouldRemove = true
