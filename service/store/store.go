@@ -33,7 +33,7 @@ import (
 
 const (
 	// gcInterval specifies how often to run the periodical garbage collector.
-	gcInterval = time.Second * 30 // TODO(jsign): remove temporal change while is a PR
+	gcInterval = time.Hour
 	// defaultListLimit is the default list page size.
 	defaultListLimit = 10
 	// maxListLimit is the max list page size.
