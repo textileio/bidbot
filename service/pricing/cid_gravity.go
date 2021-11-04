@@ -144,7 +144,7 @@ func (cg *clientRules) maybeReloadRules(url string, timeout time.Duration, cache
 	}
 	if t := cg.apiThrottlingReset.Load(); t != nil {
 		reset := t.(time.Time)
-		if !reset.IsZero() && time.Now().Before(reset) {
+		if time.Now().Before(reset) {
 			log.Infof("API rate limit won't reset until: %v", reset)
 			return false
 		}
@@ -187,7 +187,6 @@ func (cg *clientRules) loadRules(url string) error {
 		return fmt.Errorf("contacting CID gravity server: %v", err)
 	}
 
-	cg.apiThrottlingReset.Store(time.Time{})
 	switch resp.StatusCode {
 	case http.StatusOK:
 		// proceed
