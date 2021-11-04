@@ -203,7 +203,7 @@ func TestMaybeReloadRules(t *testing.T) {
 	})
 	t.Run("API rate limit", func(t *testing.T) {
 		reqs := 0
-		backoff429 = time.Millisecond * 100
+		backoff429 = time.Millisecond * 50
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if reqs == 0 {
 				rw.WriteHeader(http.StatusTooManyRequests)
@@ -216,11 +216,15 @@ func TestMaybeReloadRules(t *testing.T) {
 		timeout := time.Millisecond
 		valid := cg.maybeReloadRules(server.URL, timeout, 0)
 		require.False(t, valid, "limit is hit")
-		time.Sleep(10 * time.Millisecond)
-		valid = cg.maybeReloadRules(server.URL, timeout, 0)
-		require.False(t, valid, "shouldn't hit API again until reset time")
-		time.Sleep(time.Second)
-		valid = cg.maybeReloadRules(server.URL, timeout, 0)
-		require.True(t, valid, "should hit API again after reset time")
+
+		require.Eventually(t, func() bool {
+			valid = cg.maybeReloadRules(server.URL, timeout, 0)
+			return !valid
+		}, time.Second, time.Millisecond*10)
+
+		require.Eventually(t, func() bool {
+			valid = cg.maybeReloadRules(server.URL, timeout, 0)
+			return valid
+		}, time.Second*10, time.Second)
 	})
 }
