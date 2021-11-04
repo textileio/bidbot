@@ -32,7 +32,7 @@ import (
 
 const (
 	// gcInterval specifies how often to run the periodical garbage collector.
-	gcInterval = time.Hour
+	gcInterval = time.Minute // TODO(jsign): remove temporal change while is a PR
 	// defaultListLimit is the default list page size.
 	defaultListLimit = 10
 	// maxListLimit is the max list page size.
@@ -714,7 +714,12 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 			log.Errorf("error walking into %s: %v", path, err)
 			return nil
 		}
+		if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+			log.Infof("gc ignoring symlink %s", path)
+			return nil
+		}
 		if info.IsDir() {
+			log.Infof("gc ignoring symlink file %s", path)
 			return nil
 		}
 		shouldRemove := false
