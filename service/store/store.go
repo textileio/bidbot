@@ -516,16 +516,15 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size u
 	}
 	carDownloadPath := s.dealDataFilePathFor(bidID, payloadCid)
 
-	ctx, cancel := context.WithTimeout(s.ctx, s.dealDataFetchTimeout)
-	defer cancel()
-
 	if s.boostedDownload {
-		ok := boostDownload(ctx, uri, carDownloadPath)
+		ok := s.boostDownload(s.ctx, uri, carDownloadPath)
 		if ok {
 			return carDownloadPath, nil
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(s.ctx, s.dealDataFetchTimeout)
+	defer cancel()
 	f, err := os.Create(carDownloadPath)
 	if err != nil {
 		return "", fmt.Errorf("opening file for deal data: %v", err)
@@ -546,7 +545,9 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size u
 	return f.Name(), nil
 }
 
-func boostDownload(ctx context.Context, uri string, carDownloadPath string) bool {
+func (s *Store) boostDownload(ctx context.Context, uri string, carDownloadPath string) bool {
+	ctx, cancel := context.WithTimeout(ctx, s.dealDataFetchTimeout)
+	defer cancel()
 	d := got.NewDownload(ctx, uri, carDownloadPath)
 	if err := d.Init(); err != nil {
 		log.Errorf("boosted download check failed, using regular download: %s", err)
