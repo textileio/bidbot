@@ -510,10 +510,6 @@ func (s *Store) WriteDealData(b *Bid) (string, error) {
 
 // WriteDataURI writes the uri resource to the configured deal data directory.
 func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size uint64) (string, error) {
-	duri, err := datauri.NewURI(payloadCid, uri)
-	if err != nil {
-		return "", fmt.Errorf("parsing data uri: %w", err)
-	}
 	carDownloadPath := s.dealDataFilePathFor(bidID, payloadCid)
 
 	if s.boostedDownload {
@@ -539,6 +535,11 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size u
 		return "", fmt.Errorf("seeking file to the beginning: %v", err)
 	}
 	log.Debugf("fetching %s with timeout of %v", uri, s.dealDataFetchTimeout)
+
+	duri, err := datauri.NewURI(payloadCid, uri)
+	if err != nil {
+		return "", fmt.Errorf("parsing data uri: %w", err)
+	}
 	if err := duri.Write(ctx, f); err != nil {
 		return "", fmt.Errorf("writing data uri %s: %w", uri, err)
 	}
