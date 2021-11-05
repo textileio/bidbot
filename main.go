@@ -155,9 +155,10 @@ No limit by default.`,
 			Description: `If bigger than zero, only run that many imports concurrently. Zero means no limits.`,
 		},
 		{
-			Name:        "boost-download",
-			DefValue:    false,
-			Description: `Experimental: creates multiple TCP connections to boost download speeds. Use with caution since might not be compatible in all filesystems.`,
+			Name:     "boost-download",
+			DefValue: false,
+			Description: `Experimental: creates multiple TCP connections to boost download speeds. 
+Use with caution since might not be compatible in all filesystems.`,
 		},
 		{
 			Name:     "sealing-sectors-limit",
