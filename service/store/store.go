@@ -19,6 +19,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dsq "github.com/ipfs/go-datastore/query"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/melbahja/got"
 	"github.com/oklog/ulid/v2"
 	"github.com/textileio/bidbot/lib/auction"
 	"github.com/textileio/bidbot/lib/datauri"
@@ -177,6 +178,8 @@ type Store struct {
 	dealDataFetchTimeout  time.Duration
 	dealProgressReporter  ProgressReporter
 
+	boostedDownload bool
+
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -196,6 +199,7 @@ func NewStore(
 	discardOrphanDealsAfter time.Duration,
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
+	boostDownload bool,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
@@ -209,6 +213,7 @@ func NewStore(
 		dealDataFetchAttempts: dealDataFetchAttempts,
 		dealDataFetchTimeout:  dealDataFetchTimeout,
 		dealProgressReporter:  dealProgressReporter,
+		boostedDownload:       boostDownload,
 		ctx:                   ctx,
 		cancel:                cancel,
 	}
@@ -509,7 +514,19 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size u
 	if err != nil {
 		return "", fmt.Errorf("parsing data uri: %w", err)
 	}
-	f, err := os.Create(s.dealDataFilePathFor(bidID, payloadCid))
+	carDownloadPath := s.dealDataFilePathFor(bidID, payloadCid)
+
+	ctx, cancel := context.WithTimeout(s.ctx, s.dealDataFetchTimeout)
+	defer cancel()
+
+	if s.boostedDownload {
+		ok := boostDownload(ctx, uri, carDownloadPath)
+		if ok {
+			return carDownloadPath, nil
+		}
+	}
+
+	f, err := os.Create(carDownloadPath)
 	if err != nil {
 		return "", fmt.Errorf("opening file for deal data: %v", err)
 	}
@@ -523,12 +540,23 @@ func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size u
 		return "", fmt.Errorf("seeking file to the beginning: %v", err)
 	}
 	log.Debugf("fetching %s with timeout of %v", uri, s.dealDataFetchTimeout)
-	ctx, cancel := context.WithTimeout(s.ctx, s.dealDataFetchTimeout)
-	defer cancel()
 	if err := duri.Write(ctx, f); err != nil {
 		return "", fmt.Errorf("writing data uri %s: %w", uri, err)
 	}
 	return f.Name(), nil
+}
+
+func boostDownload(ctx context.Context, uri string, carDownloadPath string) bool {
+	d := got.NewDownload(ctx, uri, carDownloadPath)
+	if err := d.Init(); err != nil {
+		log.Errorf("boosted download check failed, using regular download: %s", err)
+		return false
+	}
+	if err := d.Start(); err != nil {
+		log.Errorf("boosted download failed, using regular download: %s", err)
+		return false
+	}
+	return true
 }
 
 // HealthCheck checks if the store is healthy enough to participate in bidding.
