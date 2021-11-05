@@ -154,7 +154,11 @@ No limit by default.`,
 			DefValue:    0,
 			Description: `If bigger than zero, only run that many imports concurrently. Zero means no limits.`,
 		},
-
+		{
+			Name:        "boost-download",
+			DefValue:    false,
+			Description: `Experimental: creates multiple TCP connections to boost download speeds. Use with caution since might not be compatible in all filesystems.`,
+		},
 		{
 			Name:     "sealing-sectors-limit",
 			DefValue: 0,
@@ -405,6 +409,7 @@ var daemonCmd = &cobra.Command{
 			},
 			BytesLimiter:        bytesLimiter,
 			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
+			BoostDownload:       v.GetBool("boost-download"),
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 			PricingRules:        pricing.EmptyRules{},
 			PricingRulesStrict:  v.GetBool("cid-gravity-strict"),

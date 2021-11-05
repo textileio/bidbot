@@ -59,6 +59,7 @@ type Config struct {
 	AuctionFilters      AuctionFilters
 	BytesLimiter        limiter.Limiter
 	ConcurrentImports   int
+	BoostDownload       bool
 	SealingSectorsLimit int
 	PricingRules        pricing.PricingRules
 	PricingRulesStrict  bool
@@ -202,6 +203,7 @@ func New(
 		conf.BidParams.DiscardOrphanDealsAfter,
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
+		conf.BoostDownload,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)
