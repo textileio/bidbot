@@ -95,6 +95,22 @@ func TestNew(t *testing.T) {
 	})
 	require.Error(t, err)
 
+	// Incorrect string representation of whitelisted client address.
+	_, err = newService(t, func(config *service.Config) {
+		config.AuctionFilters = service.AuctionFilters{
+			DealDuration: service.MinMaxFilter{
+				Min: 10,
+				Max: 20,
+			},
+			DealSize: service.MinMaxFilter{
+				Min: 10,
+				Max: 20,
+			},
+			ClientAddressWhitelist: []string{"invalidClientAddr"},
+		}
+	})
+	require.Error(t, err)
+
 	// Good config
 	s, err := newService(t, nil)
 	require.NoError(t, err)
