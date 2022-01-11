@@ -83,14 +83,27 @@ func (fc *LotusFilClient) VerifyBidder(bidderSig []byte, bidderID peer.ID, stora
 	if err != nil {
 		return false, fmt.Errorf("calling full node state miner info: %v", err)
 	}
-	ownerWalletAddr, err := fc.fullNode.StateAccountKey(ctx, mi.Owner, types.EmptyTSK)
+
+	okOwner, errVerifySigOwner := fc.verifySignature(mi.Owner, sig, bidderID)
+	okWorker, errVerifySigWorker := fc.verifySignature(mi.Worker, sig, bidderID)
+	if errVerifySigOwner != nil && errVerifySigWorker != nil {
+		return false, fmt.Errorf("verifying signature from owner (err: %s) or worker (err: %s) failed", errVerifySigOwner, errVerifySigWorker)
+	}
+
+	return okOwner || okWorker, nil
+}
+
+func (fc *LotusFilClient) verifySignature(target address.Address, sig crypto.Signature, bidderID peer.ID) (bool, error) {
+	ctx, cancel := context.WithTimeout(fc.ctx, requestTimeout)
+	defer cancel()
+	targetWalletAddr, err := fc.fullNode.StateAccountKey(ctx, target, types.EmptyTSK)
 	if err != nil {
 		return false, fmt.Errorf("calling full node state account key: %v", err)
 	}
 
 	ctx, cancel = context.WithTimeout(fc.ctx, requestTimeout)
 	defer cancel()
-	ok, err := fc.fullNode.WalletVerify(ctx, ownerWalletAddr, []byte(bidderID), &sig)
+	ok, err := fc.fullNode.WalletVerify(ctx, targetWalletAddr, []byte(bidderID), &sig)
 	if err != nil {
 		return false, fmt.Errorf("calling full node wallet verify: %v", err)
 	}
