@@ -63,7 +63,10 @@ func (fc *LotusFilClient) Close() error {
 
 // VerifyBidder ensures that the wallet address authorized the use of bidder peer.ID to make bids.
 // Miner's authorize a bidding peer.ID by signing it with a wallet address private key.
-func (fc *LotusFilClient) VerifyBidder(bidderSig []byte, bidderID peer.ID, storageProviderIDStr string) (bool, error) {
+func (fc *LotusFilClient) VerifyBidder(
+	bidderSig []byte,
+	bidderID peer.ID,
+	storageProviderIDStr string) (bool, error) {
 	if fc.fakeMode {
 		return true, nil
 	}
@@ -87,13 +90,18 @@ func (fc *LotusFilClient) VerifyBidder(bidderSig []byte, bidderID peer.ID, stora
 	okOwner, errVerifySigOwner := fc.verifySignature(mi.Owner, sig, bidderID)
 	okWorker, errVerifySigWorker := fc.verifySignature(mi.Worker, sig, bidderID)
 	if errVerifySigOwner != nil && errVerifySigWorker != nil {
-		return false, fmt.Errorf("verifying signature from owner (err: %s) or worker (err: %s) failed", errVerifySigOwner, errVerifySigWorker)
+		return false, fmt.Errorf(
+			"verifying signature from owner (err: %s) or worker (err: %s) failed",
+			errVerifySigOwner, errVerifySigWorker)
 	}
 
 	return okOwner || okWorker, nil
 }
 
-func (fc *LotusFilClient) verifySignature(target address.Address, sig crypto.Signature, bidderID peer.ID) (bool, error) {
+func (fc *LotusFilClient) verifySignature(
+	target address.Address,
+	sig crypto.Signature,
+	bidderID peer.ID) (bool, error) {
 	ctx, cancel := context.WithTimeout(fc.ctx, requestTimeout)
 	defer cancel()
 	targetWalletAddr, err := fc.fullNode.StateAccountKey(ctx, target, types.EmptyTSK)
