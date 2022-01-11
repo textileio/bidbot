@@ -26,8 +26,8 @@ require (
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/ipld/go-car v0.3.2-0.20211001225732-32d0d9933823
 	github.com/joho/godotenv v1.3.0
-	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.9.0
+	github.com/libp2p/go-libp2p-connmgr v0.3.0
+	github.com/libp2p/go-libp2p-core v0.13.0
 	github.com/melbahja/got v0.6.1
 	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/multiformats/go-multiaddr-dns v0.3.1
