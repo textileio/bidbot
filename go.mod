@@ -46,7 +46,7 @@ require (
 	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
 	github.com/textileio/go-libp2p-pubsub-rpc v0.0.6
 	github.com/textileio/go-log/v2 v2.1.3-gke-2
-	go.opentelemetry.io/otel/metric v0.21.0
+	go.opentelemetry.io/otel/metric v0.26.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/protobuf v1.27.1
 )
