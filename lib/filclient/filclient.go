@@ -94,13 +94,17 @@ func (fc *LotusFilClient) VerifyBidder(
 	}
 
 	okWorker, errVerifySigWorker := fc.verifySignature(mi.Worker, sig, bidderID)
+	if errVerifySigWorker == nil && okWorker {
+		return true, nil
+	}
+
 	if errVerifySigOwner != nil && errVerifySigWorker != nil {
 		return false, fmt.Errorf(
 			"verifying signature from owner (err: %s) or worker (err: %s) failed",
 			errVerifySigOwner, errVerifySigWorker)
 	}
 
-	return okWorker, nil
+	return false, nil
 }
 
 func (fc *LotusFilClient) verifySignature(
