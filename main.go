@@ -278,9 +278,9 @@ The change the deal data directory, set the $BIDBOT_DEAL_DATA_DIRECTORY environm
 
 		fmt.Printf(`Bidbot needs a signature from a miner wallet address to authenticate bids.
 
-1. Sign this token with an address from your miner owner Lotus wallet address:
+1. Sign this token with an address from your miner owner or worker Lotus wallet address of the storage provider:
 
-    lotus wallet sign [owner-address] %s
+    lotus wallet sign [owner-or-worker-address] %s
 
 2. Start listening for deal auctions using the wallet address and signature from step 1:
 
