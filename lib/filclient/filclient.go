@@ -88,6 +88,11 @@ func (fc *LotusFilClient) VerifyBidder(
 	}
 
 	okOwner, errVerifySigOwner := fc.verifySignature(mi.Owner, sig, bidderID)
+	// Do an early return to avoid double work.
+	if errVerifySigOwner == nil && okOwner {
+		return true, nil
+	}
+
 	okWorker, errVerifySigWorker := fc.verifySignature(mi.Worker, sig, bidderID)
 	if errVerifySigOwner != nil && errVerifySigWorker != nil {
 		return false, fmt.Errorf(
@@ -95,7 +100,7 @@ func (fc *LotusFilClient) VerifyBidder(
 			errVerifySigOwner, errVerifySigWorker)
 	}
 
-	return okOwner || okWorker, nil
+	return okWorker, nil
 }
 
 func (fc *LotusFilClient) verifySignature(
