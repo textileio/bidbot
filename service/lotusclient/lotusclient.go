@@ -32,9 +32,10 @@ type LotusClient interface {
 
 // Client provides access to Lotus for importing deal data.
 type Client struct {
-	cmin     api.StorageMiner
-	cmkt     api.StorageMiner
-	fakeMode bool
+	cmin          api.StorageMiner
+	cmkt          api.StorageMiner
+	fakeMode      bool
+	finalizeEarly bool
 
 	ctx       context.Context
 	finalizer *finalizer.Finalizer
@@ -42,15 +43,16 @@ type Client struct {
 
 // New returns a new *LotusClient.
 func New(maddr string, authToken string, marketMaddr string, marketAuthToken string,
-	connRetries int, fakeMode bool) (*Client, error) {
+	connRetries int, fakeMode bool, finalizeEarly bool) (*Client, error) {
 	fin := finalizer.NewFinalizer()
 	ctx, cancel := context.WithCancel(context.Background())
 	fin.Add(finalizer.NewContextCloser(cancel))
 
 	lc := &Client{
-		fakeMode:  fakeMode,
-		ctx:       ctx,
-		finalizer: fin,
+		fakeMode:      fakeMode,
+		finalizeEarly: finalizeEarly,
+		ctx:           ctx,
+		finalizer:     fin,
 	}
 	if lc.fakeMode {
 		return lc, nil
@@ -122,6 +124,12 @@ func (c *Client) CurrentSealingSectors() (int, error) {
 	// hardcode here to avoid importing tons of dependencies.
 	notSealingStates := []string{"Proving", "Removed", "Removing",
 		"Terminating", "TerminateWait", "TerminateFinality", "TerminateFailed"}
+
+	if c.finalizeEarly {
+		// some additional states can be mapped to sstProving with the FinalizeEarly option
+		// https://github.com/filecoin-project/lotus/blob/v1.13.0/extern/storage-sealing/sector_state.go#L115
+		notSealingStates = append(notSealingStates, "SubmitCommit", "CommitWait", "SubmitCommitAggregate", "CommitAggregateWait", "SubmitReplicaUpdate", "ReplicaUpdateWait")
+	}
 
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
 	defer cancel()

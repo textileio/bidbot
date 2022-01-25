@@ -167,6 +167,11 @@ Use with caution since might not be compatible in all filesystems.`,
 Zero means no limits`,
 		},
 		{
+			Name:        "finalize-early",
+			DefValue:    false,
+			Description: "Match lotus FinalizeEarly sector state accounting",
+		},
+		{
 			Name:        "deal-data-fetch-attempts",
 			DefValue:    3,
 			Description: "Number of times fetching deal data will be attempted before failing",
@@ -364,6 +369,7 @@ var daemonCmd = &cobra.Command{
 			v.GetString("lotus-market-api-token"),
 			v.GetInt("lotus-api-conn-retries"),
 			v.GetBool("fake-mode"),
+			v.GetBool("finalize-early"),
 		)
 		cli.CheckErrf("creating lotus client: %v", err)
 		fin.Add(lc)
