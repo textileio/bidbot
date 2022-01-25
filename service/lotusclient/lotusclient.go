@@ -128,7 +128,8 @@ func (c *Client) CurrentSealingSectors() (int, error) {
 	if c.finalizeEarly {
 		// some additional states can be mapped to sstProving with the FinalizeEarly option
 		// https://github.com/filecoin-project/lotus/blob/v1.13.0/extern/storage-sealing/sector_state.go#L115
-		notSealingStates = append(notSealingStates, "SubmitCommit", "CommitWait", "SubmitCommitAggregate", "CommitAggregateWait", "SubmitReplicaUpdate", "ReplicaUpdateWait")
+		notSealingStates = append(notSealingStates, "SubmitCommit", "CommitWait",
+			"SubmitCommitAggregate", "CommitAggregateWait", "SubmitReplicaUpdate", "ReplicaUpdateWait")
 	}
 
 	ctx, cancel := context.WithTimeout(c.ctx, requestTimeout)
