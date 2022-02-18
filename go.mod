@@ -9,12 +9,11 @@ require (
 	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
 	github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222
 	github.com/facebookgo/testname v0.0.0-20150612200628-5443337c3a12 // indirect
-	github.com/filecoin-project/go-address v0.0.5
+	github.com/filecoin-project/go-address v0.0.6
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.1-0.20201006184820-924ee87a1349 // indirect
-	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
-	github.com/filecoin-project/go-state-types v0.1.1-0.20210915140513-d354ccf10379
-	github.com/filecoin-project/lotus v1.13.0
-	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
+	github.com/filecoin-project/go-jsonrpc v0.1.5
+	github.com/filecoin-project/go-state-types v0.1.3
+	github.com/filecoin-project/lotus v1.14.1
 	github.com/google/uuid v1.3.0
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.4.6
@@ -32,7 +31,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/multiformats/go-multiaddr-dns v0.3.1
 	github.com/multiformats/go-multibase v0.0.3
-	github.com/multiformats/go-multihash v0.0.16
+	github.com/multiformats/go-multihash v0.1.0
 	github.com/oklog/ulid/v2 v2.0.2
 	github.com/shirou/gopsutil v2.20.5+incompatible // indirect
 	github.com/spf13/cobra v1.1.3
