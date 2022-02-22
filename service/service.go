@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/filecoin-project/go-address"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	core "github.com/libp2p/go-libp2p-core/peer"
@@ -121,6 +122,8 @@ type AuctionFilters struct {
 	DealDuration MinMaxFilter
 	// DealSize sets the min and max deal size to bid on.
 	DealSize MinMaxFilter
+	// ClientAddressWhitelist if not empty only allows bidding in auctions from a clients list.
+	ClientAddressWhitelist []string
 }
 
 // Validate ensures AuctionFilters are valid.
@@ -130,6 +133,11 @@ func (f *AuctionFilters) Validate() error {
 	}
 	if err := f.DealDuration.Validate(); err != nil {
 		return fmt.Errorf("invalid deal size filter: %v", err)
+	}
+	for _, clientAddress := range f.ClientAddressWhitelist {
+		if _, err := address.NewFromString(clientAddress); err != nil {
+			return fmt.Errorf("invalid client address filter %s: %s", clientAddress, err)
+		}
 	}
 	return nil
 }
@@ -441,6 +449,19 @@ func (s *Service) filterAuction(auction *pb.Auction) (rejectReason string) {
 		return fmt.Sprintf("deal duration falls outside of the range [%d, %d]",
 			s.auctionFilters.DealDuration.Min,
 			s.auctionFilters.DealDuration.Max)
+	}
+
+	if len(s.auctionFilters.ClientAddressWhitelist) > 0 {
+		var isWhitelistedClient bool
+		for _, clientAddress := range s.auctionFilters.ClientAddressWhitelist {
+			if clientAddress == auction.ClientAddress {
+				isWhitelistedClient = true
+				break
+			}
+		}
+		if !isWhitelistedClient {
+			return fmt.Sprintf("auction is from client %s which isn't whitelisted", auction.ClientAddress)
+		}
 	}
 
 	return ""

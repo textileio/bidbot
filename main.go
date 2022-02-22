@@ -181,7 +181,11 @@ Zero means no limits`,
 			DefValue:    "3h",
 			Description: `The timeout to fetch deal data. Be conservative to leave enough room for network instability.`,
 		},
-
+		{
+			Name:        "client-address-whitelist",
+			DefValue:    "",
+			Description: `If not empty, only bid in auctions from the comma-separated list of client addresses`,
+		},
 		{
 			Name:        "cid-gravity-key",
 			DefValue:    "",
@@ -413,6 +417,7 @@ var daemonCmd = &cobra.Command{
 					Min: v.GetUint64("deal-size-min"),
 					Max: v.GetUint64("deal-size-max"),
 				},
+				ClientAddressWhitelist: strings.Split(v.GetString("client-address-whitelist"), ","),
 			},
 			BytesLimiter:        bytesLimiter,
 			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
