@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -68,6 +69,11 @@ var Flags = []cli.Flag{
 		Description: "Libp2p connection manager high water mark",
 	},
 	{
+		Name:        "conn-grace",
+		DefValue:    time.Second * 120,
+		Description: "Libp2p connection manager grace period",
+	},
+	{
 		Name:        "quic",
 		DefValue:    false,
 		Description: "Enable the QUIC transport",
@@ -107,6 +113,7 @@ func GetConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string, isAuctioneer
 	connMan, err := connmgr.NewConnManager(
 		v.GetInt("conn-low"),
 		v.GetInt("conn-high"),
+		connmgr.WithGracePeriod(v.GetDuration("conn-grace")),
 	)
 	if err != nil {
 		return peer.Config{}, fmt.Errorf("creating conn manager: %s", err)
