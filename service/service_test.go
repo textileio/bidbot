@@ -44,6 +44,7 @@ func init() {
 		"bidbot/service": golog.LevelDebug,
 		"bidbot/store":   golog.LevelDebug,
 		"psrpc/peer":     golog.LevelDebug,
+		"psrpc":          golog.LevelDebug,
 	}); err != nil {
 		panic(err)
 	}
