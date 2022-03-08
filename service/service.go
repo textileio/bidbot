@@ -282,8 +282,8 @@ func (s *Service) ListBids(query bidstore.Query) ([]*bidstore.Bid, error) {
 }
 
 // GetBid gets the bid with specific ID.
-func (s *Service) GetBid(id auction.BidID) (*bidstore.Bid, error) {
-	return s.store.GetBid(id)
+func (s *Service) GetBid(ctx context.Context, id auction.BidID) (*bidstore.Bid, error) {
+	return s.store.GetBid(ctx, id)
 }
 
 // WriteDataURI writes a data uri resource to the configured deal data directory.
@@ -316,14 +316,16 @@ func (s *Service) AuctionsHandler(from core.ID, a *pb.Auction) error {
 	}
 	log.Infof("auction details:\n%s", string(ajson))
 	go func() {
-		if err := s.makeBid(a, from); err != nil {
+		ctx, cls := context.WithTimeout(context.Background(), time.Second*30)
+		defer cls()
+		if err := s.makeBid(ctx, a, from); err != nil {
 			log.Errorf("making bid: %v", err)
 		}
 	}()
 	return nil
 }
 
-func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
+func (s *Service) makeBid(ctx context.Context, a *pb.Auction, from core.ID) error {
 	if rejectReason := s.filterAuction(a); rejectReason != "" {
 		log.Infof("not bidding in auction %s from %s: %s", a.Id, from, rejectReason)
 		return nil
@@ -404,7 +406,7 @@ func (s *Service) makeBid(a *pb.Auction, from core.ID) error {
 		return fmt.Errorf("parsing payload cid: %v", err)
 	}
 	// Save bid locally
-	if err := s.store.SaveBid(bidstore.Bid{
+	if err := s.store.SaveBid(ctx, bidstore.Bid{
 		ID:               auction.BidID(id),
 		AuctionID:        auction.ID(a.Id),
 		AuctioneerID:     from,
@@ -447,8 +449,8 @@ func (s *Service) filterAuction(auction *pb.Auction) (rejectReason string) {
 }
 
 // WinsHandler implements MessageHandler.
-func (s *Service) WinsHandler(wb *pb.WinningBid) error {
-	bid, err := s.store.GetBid(auction.BidID(wb.BidId))
+func (s *Service) WinsHandler(ctx context.Context, wb *pb.WinningBid) error {
+	bid, err := s.store.GetBid(ctx, auction.BidID(wb.BidId))
 	if err != nil {
 		return fmt.Errorf("getting bid: %v", err)
 	}
@@ -482,7 +484,7 @@ func (s *Service) WinsHandler(wb *pb.WinningBid) error {
 		return fmt.Errorf("validating data uri: %v", err)
 	}
 
-	if err := s.store.SetAwaitingProposalCid(auction.BidID(wb.BidId), sources); err != nil {
+	if err := s.store.SetAwaitingProposalCid(ctx, auction.BidID(wb.BidId), sources); err != nil {
 		return fmt.Errorf("setting awaiting proposal cid: %v", err)
 	}
 
@@ -491,12 +493,12 @@ func (s *Service) WinsHandler(wb *pb.WinningBid) error {
 }
 
 // ProposalsHandler implements MessageHandler.
-func (s *Service) ProposalsHandler(prop *pb.WinningBidProposal) error {
+func (s *Service) ProposalsHandler(ctx context.Context, prop *pb.WinningBidProposal) error {
 	pcid, err := cid.Decode(prop.ProposalCid)
 	if err != nil {
 		return fmt.Errorf("decoding proposal cid: %v", err)
 	}
-	if err := s.store.SetProposalCid(auction.BidID(prop.BidId), pcid); err != nil {
+	if err := s.store.SetProposalCid(ctx, auction.BidID(prop.BidId), pcid); err != nil {
 		return fmt.Errorf("setting proposal cid: %v", err)
 	}
 	// ready to fetch data, so the requested quota is actually in use.

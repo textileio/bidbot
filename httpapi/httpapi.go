@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,7 +25,7 @@ var (
 type Service interface {
 	PeerInfo() (*peer.Info, error)
 	ListBids(query bidstore.Query) ([]*bidstore.Bid, error)
-	GetBid(id auction.BidID) (*bidstore.Bid, error)
+	GetBid(ctx context.Context, id auction.BidID) (*bidstore.Bid, error)
 	WriteDataURI(payloadCid, uri string) (string, error)
 	SetPaused(paused bool)
 }
@@ -134,7 +135,7 @@ func dealsHandler(service Service) http.HandlerFunc {
 				return
 			}
 		} else {
-			bid, err := service.GetBid(auction.BidID(urlParts[2]))
+			bid, err := service.GetBid(r.Context(), auction.BidID(urlParts[2]))
 			if err == nil {
 				bids = append(bids, bid)
 			} else if err != bidstore.ErrBidNotFound {

@@ -1,6 +1,7 @@
 package txndswrap
 
 import (
+	"context"
 	"strings"
 
 	ds "github.com/ipfs/go-datastore"
@@ -71,46 +72,46 @@ func (d *Datastore) QueryExtended(q dse.QueryExt) (dsq.Results, error) {
 	return d.child.QueryExtended(q)
 }
 
-func (t *txn) Commit() error {
-	return t.Txn.Commit()
+func (t *txn) Commit(ctx context.Context) error {
+	return t.Txn.Commit(ctx)
 }
 
-func (t *txn) Discard() {
-	t.Txn.Discard()
+func (t *txn) Discard(ctx context.Context) {
+	t.Txn.Discard(ctx)
 }
 
 // Put stores the given value, transforming the key first.
-func (t *txn) Put(key ds.Key, value []byte) (err error) {
-	return t.Txn.Put(t.ds.ConvertKey(key), value)
+func (t *txn) Put(ctx context.Context, key ds.Key, value []byte) (err error) {
+	return t.Txn.Put(ctx, t.ds.ConvertKey(key), value)
 }
 
 // Delete removes the value for given key.
-func (t *txn) Delete(key ds.Key) (err error) {
-	return t.Txn.Delete(t.ds.ConvertKey(key))
+func (t *txn) Delete(ctx context.Context, key ds.Key) (err error) {
+	return t.Txn.Delete(ctx, t.ds.ConvertKey(key))
 }
 
 // Get returns the value for given key, transforming the key first.
-func (t *txn) Get(key ds.Key) (value []byte, err error) {
-	return t.Txn.Get(t.ds.ConvertKey(key))
+func (t *txn) Get(ctx context.Context, key ds.Key) (value []byte, err error) {
+	return t.Txn.Get(ctx, t.ds.ConvertKey(key))
 }
 
 // Has returns whether the datastore has a value for a given key, transforming
 // the key first.
-func (t *txn) Has(key ds.Key) (exists bool, err error) {
-	return t.Txn.Has(t.ds.ConvertKey(key))
+func (t *txn) Has(ctx context.Context, key ds.Key) (exists bool, err error) {
+	return t.Txn.Has(ctx, t.ds.ConvertKey(key))
 }
 
 // GetSize returns the size of the value named by the given key, transforming
 // the key first.
-func (t *txn) GetSize(key ds.Key) (size int, err error) {
-	return t.Txn.GetSize(t.ds.ConvertKey(key))
+func (t *txn) GetSize(ctx context.Context, key ds.Key) (size int, err error) {
+	return t.Txn.GetSize(ctx, t.ds.ConvertKey(key))
 }
 
 // Query implements Query, inverting keys on the way back out.
-func (t *txn) Query(q dsq.Query) (dsq.Results, error) {
+func (t *txn) Query(ctx context.Context, q dsq.Query) (dsq.Results, error) {
 	nq, cq := t.prepareQuery(dse.QueryExt{Query: q})
 
-	qr, err := t.Txn.Query(cq.Query)
+	qr, err := t.Txn.Query(ctx, cq.Query)
 	if err != nil {
 		return nil, err
 	}
