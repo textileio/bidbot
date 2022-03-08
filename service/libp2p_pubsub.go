@@ -103,7 +103,7 @@ func (ps *Libp2pPubsub) Subscribe(bootstrap bool, h MessageHandler) error {
 		}
 		ctx, cls := context.WithTimeout(context.Background(), time.Second*30)
 		defer cls()
-		if err := h.WinsHandler(ctx, wb); err != nil {
+		if err = h.WinsHandler(ctx, wb); err != nil {
 			log.Errorf("handling proposal for bid %s: %v", wb.BidId, err)
 		}
 		return nil, err
@@ -124,7 +124,7 @@ func (ps *Libp2pPubsub) Subscribe(bootstrap bool, h MessageHandler) error {
 		}
 		ctx, cls := context.WithTimeout(context.Background(), time.Second*30)
 		defer cls()
-		if err := h.ProposalsHandler(ctx, proposal); err != nil {
+		if err = h.ProposalsHandler(ctx, proposal); err != nil {
 			log.Errorf("handling wins for bid %s: %v", proposal.BidId, err)
 		}
 		return nil, err
