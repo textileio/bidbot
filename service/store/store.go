@@ -234,7 +234,7 @@ func NewStore(
 	}
 
 	// Re-enqueue jobs that may have been orphaned during an forced shutdown
-	if err := s.getOrphaned(); err != nil {
+	if err := s.getOrphaned(ctx); err != nil {
 		return nil, fmt.Errorf("getting orphaned jobs: %w", err)
 	}
 
@@ -251,13 +251,13 @@ func (s *Store) Close() error {
 }
 
 // SaveBid saves a bid that has been submitted to an auctioneer.
-func (s *Store) SaveBid(bid Bid) error {
+func (s *Store) SaveBid(ctx context.Context, bid Bid) error {
 	if err := validate(bid); err != nil {
 		return fmt.Errorf("invalid bid data: %s", err)
 	}
 
 	bid.CreatedAt = time.Now()
-	if err := s.saveAndTransitionStatus(nil, &bid, BidStatusSubmitted); err != nil {
+	if err := s.saveAndTransitionStatus(ctx, nil, &bid, BidStatusSubmitted); err != nil {
 		return fmt.Errorf("saving bid: %v", err)
 	}
 	log.Infof("saved bid %s", bid.ID)
@@ -312,16 +312,16 @@ func validate(b Bid) error {
 
 // GetBid returns a bid by id.
 // If a bid is not found for id, ErrBidNotFound is returned.
-func (s *Store) GetBid(id auction.BidID) (*Bid, error) {
-	b, err := getBid(s.store, id)
+func (s *Store) GetBid(ctx context.Context, id auction.BidID) (*Bid, error) {
+	b, err := getBid(ctx, s.store, id)
 	if err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func getBid(reader ds.Read, id auction.BidID) (*Bid, error) {
-	val, err := reader.Get(dsPrefix.ChildString(string(id)))
+func getBid(ctx context.Context, reader ds.Read, id auction.BidID) (*Bid, error) {
+	val, err := reader.Get(ctx, dsPrefix.ChildString(string(id)))
 	if errors.Is(err, ds.ErrNotFound) {
 		return nil, ErrBidNotFound
 	} else if err != nil {
@@ -336,18 +336,18 @@ func getBid(reader ds.Read, id auction.BidID) (*Bid, error) {
 
 // SetAwaitingProposalCid updates bid with the given sources and switch status to BidStatusAwaitingProposal. If a bid is
 // not found for id, ErrBidNotFound is returned.
-func (s *Store) SetAwaitingProposalCid(id auction.BidID, sources auction.Sources) error {
+func (s *Store) SetAwaitingProposalCid(ctx context.Context, id auction.BidID, sources auction.Sources) error {
 	if err := sources.Validate(); err != nil {
 		return err
 	}
 
-	txn, err := s.store.NewTransaction(false)
+	txn, err := s.store.NewTransaction(ctx, false)
 	if err != nil {
 		return fmt.Errorf("creating txn: %v", err)
 	}
-	defer txn.Discard()
+	defer txn.Discard(ctx)
 
-	b, err := getBid(txn, id)
+	b, err := getBid(ctx, txn, id)
 	if err != nil {
 		return err
 	}
@@ -359,10 +359,10 @@ func (s *Store) SetAwaitingProposalCid(id auction.BidID, sources auction.Sources
 		return fmt.Errorf("expect bid to have status '%s', got '%s'", BidStatusSubmitted, b.Status)
 	}
 	b.Sources = sources
-	if err := s.saveAndTransitionStatus(txn, b, BidStatusAwaitingProposal); err != nil {
+	if err := s.saveAndTransitionStatus(ctx, txn, b, BidStatusAwaitingProposal); err != nil {
 		return fmt.Errorf("updating bid: %v", err)
 	}
-	if err := txn.Commit(); err != nil {
+	if err := txn.Commit(ctx); err != nil {
 		return fmt.Errorf("committing txn: %v", err)
 	}
 
@@ -372,18 +372,18 @@ func (s *Store) SetAwaitingProposalCid(id auction.BidID, sources auction.Sources
 
 // SetProposalCid sets the bid proposal cid and updates status to BidStatusQueuedData.
 // If a bid is not found for id, ErrBidNotFound is returned.
-func (s *Store) SetProposalCid(id auction.BidID, pcid cid.Cid) error {
+func (s *Store) SetProposalCid(ctx context.Context, id auction.BidID, pcid cid.Cid) error {
 	if !pcid.Defined() {
 		return errors.New("proposal cid must be defined")
 	}
 
-	txn, err := s.store.NewTransaction(false)
+	txn, err := s.store.NewTransaction(ctx, false)
 	if err != nil {
 		return fmt.Errorf("creating txn: %v", err)
 	}
-	defer txn.Discard()
+	defer txn.Discard(ctx)
 
-	b, err := getBid(txn, id)
+	b, err := getBid(ctx, txn, id)
 	if err != nil {
 		return err
 	}
@@ -396,10 +396,10 @@ func (s *Store) SetProposalCid(id auction.BidID, pcid cid.Cid) error {
 	}
 
 	b.ProposalCid = pcid
-	if err := s.enqueueDataURI(txn, b); err != nil {
+	if err := s.enqueueDataURI(ctx, txn, b); err != nil {
 		return fmt.Errorf("enqueueing data uri: %v", err)
 	}
-	if err := txn.Commit(); err != nil {
+	if err := txn.Commit(ctx); err != nil {
 		return fmt.Errorf("committing txn: %v", err)
 	}
 
@@ -582,9 +582,9 @@ func (s *Store) dealDataFilePathFor(bidID auction.BidID, payloadCid string) stri
 }
 
 // enqueueDataURI queues a data uri fetch.
-func (s *Store) enqueueDataURI(txn ds.Txn, b *Bid) error {
+func (s *Store) enqueueDataURI(ctx context.Context, txn ds.Txn, b *Bid) error {
 	// Set the bid to "fetching_data"
-	if err := s.saveAndTransitionStatus(txn, b, BidStatusFetchingData); err != nil {
+	if err := s.saveAndTransitionStatus(ctx, txn, b, BidStatusFetchingData); err != nil {
 		return fmt.Errorf("updating status (fetching_data): %v", err)
 	}
 	select {
@@ -592,7 +592,7 @@ func (s *Store) enqueueDataURI(txn ds.Txn, b *Bid) error {
 	default:
 		log.Debugf("workers are busy; queueing %s", b.ID)
 		// Workers are busy, set back to "queued_data"
-		if err := s.saveAndTransitionStatus(txn, b, BidStatusQueuedData); err != nil {
+		if err := s.saveAndTransitionStatus(ctx, txn, b, BidStatusQueuedData); err != nil {
 			log.Errorf("updating status (queued_data): %v", err)
 		}
 	}
@@ -614,7 +614,7 @@ func (s *Store) fetchWorker(num int) {
 			b.DataURIFetchAttempts++
 			log.Debugf("worker %d got job %s (attempt=%d/%d)", num, b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
 			status := s.fetchOne(b)
-			if err := s.saveAndTransitionStatus(nil, b, status); err != nil {
+			if err := s.saveAndTransitionStatus(s.ctx, nil, b, status); err != nil {
 				log.Errorf("updating status for bid %s (%s): %v", b.ID, status, err)
 			}
 			log.Debugf("worker %d finished job %s", num, b.ID)
@@ -691,9 +691,9 @@ func (s *Store) startFetching() {
 			t.Stop()
 			return
 		case <-t.C:
-			s.getNext()
+			s.getNext(s.ctx)
 		case <-s.tickCh:
-			s.getNext()
+			s.getNext(s.ctx)
 		}
 	}
 }
@@ -705,7 +705,7 @@ func (s *Store) periodicalGC(discardOrphanDealsAfter time.Duration) {
 			return
 		}
 		start := time.Now()
-		bidsRemoved, filesRemoved, evaluated := s.GC(discardOrphanDealsAfter)
+		bidsRemoved, filesRemoved, evaluated := s.GC(s.ctx, discardOrphanDealsAfter)
 		log.Infof("GC finished in %v: %d orphan deals cleaned, %d deal data files cleaned, %d files evaluated",
 			time.Since(start), bidsRemoved, filesRemoved, evaluated)
 	}
@@ -713,7 +713,7 @@ func (s *Store) periodicalGC(discardOrphanDealsAfter time.Duration) {
 
 // GC cleans up deal data files, if discardOrphanDealsAfter is not zero, it
 // also removes bids staying at BidStatusAwaitingProposal for that longer.
-func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRemoved, filesEvaluated int) {
+func (s *Store) GC(ctx context.Context, discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRemoved, filesEvaluated int) {
 	bids, err := s.ListBids(Query{})
 	if err != nil {
 		log.Errorf("listing bids: %v", err)
@@ -727,7 +727,7 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 			time.Since(bid.UpdatedAt) > discardOrphanDealsAfter {
 			log.Debugf("discard deal %s for it has no progress for %v: %+v",
 				bid.ID, time.Since(bid.UpdatedAt), *bid)
-			err = s.store.Delete(dsPrefix.ChildString(string(bid.ID)))
+			err = s.store.Delete(ctx, dsPrefix.ChildString(string(bid.ID)))
 			if err != nil {
 				log.Errorf("failed to remove deal %s: %v", bid.ID, err)
 			} else {
@@ -779,15 +779,15 @@ func (s *Store) GC(discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRem
 	return
 }
 
-func (s *Store) getNext() {
-	txn, err := s.store.NewTransaction(false)
+func (s *Store) getNext(ctx context.Context) {
+	txn, err := s.store.NewTransaction(ctx, false)
 	if err != nil {
 		log.Errorf("creating txn: %v", err)
 		return
 	}
-	defer txn.Discard()
+	defer txn.Discard(ctx)
 
-	b, err := s.getQueued(txn)
+	b, err := s.getQueued(ctx, txn)
 	if err != nil {
 		log.Errorf("getting next in queued: %v", err)
 		return
@@ -796,16 +796,16 @@ func (s *Store) getNext() {
 		return
 	}
 	log.Debugf("enqueueing job: %s", b.ID)
-	if err := s.enqueueDataURI(txn, b); err != nil {
+	if err := s.enqueueDataURI(ctx, txn, b); err != nil {
 		log.Errorf("enqueueing: %v", err)
 	}
-	if err := txn.Commit(); err != nil {
+	if err := txn.Commit(ctx); err != nil {
 		log.Errorf("committing txn: %v", err)
 	}
 }
 
-func (s *Store) getQueued(txn ds.Txn) (*Bid, error) {
-	results, err := txn.Query(dsq.Query{
+func (s *Store) getQueued(ctx context.Context, txn ds.Txn) (*Bid, error) {
+	results, err := txn.Query(ctx, dsq.Query{
 		Prefix:   dsQueuedPrefix.String(),
 		Orders:   []dsq.Order{dsq.OrderByKey{}},
 		Limit:    1,
@@ -827,21 +827,21 @@ func (s *Store) getQueued(txn ds.Txn) (*Bid, error) {
 		return nil, fmt.Errorf("getting next result: %v", res.Error)
 	}
 
-	b, err := getBid(txn, auction.BidID(path.Base(res.Key)))
+	b, err := getBid(ctx, txn, auction.BidID(path.Base(res.Key)))
 	if err != nil {
 		return nil, fmt.Errorf("getting bid: %v", err)
 	}
 	return b, nil
 }
 
-func (s *Store) getOrphaned() error {
-	txn, err := s.store.NewTransaction(false)
+func (s *Store) getOrphaned(ctx context.Context) error {
+	txn, err := s.store.NewTransaction(ctx, false)
 	if err != nil {
 		return fmt.Errorf("creating txn: %v", err)
 	}
-	defer txn.Discard()
+	defer txn.Discard(ctx)
 
-	bids, err := s.getFetching(txn)
+	bids, err := s.getFetching(ctx, txn)
 	if err != nil {
 		return fmt.Errorf("getting next in queued: %v", err)
 	}
@@ -851,18 +851,18 @@ func (s *Store) getOrphaned() error {
 
 	for _, b := range bids {
 		log.Debugf("enqueueing orphaned job: %s", b.ID)
-		if err := s.enqueueDataURI(txn, &b); err != nil {
+		if err := s.enqueueDataURI(ctx, txn, &b); err != nil {
 			return fmt.Errorf("enqueueing: %v", err)
 		}
 	}
-	if err := txn.Commit(); err != nil {
+	if err := txn.Commit(ctx); err != nil {
 		return fmt.Errorf("committing txn: %v", err)
 	}
 	return nil
 }
 
-func (s *Store) getFetching(txn ds.Txn) ([]Bid, error) {
-	results, err := txn.Query(dsq.Query{
+func (s *Store) getFetching(ctx context.Context, txn ds.Txn) ([]Bid, error) {
+	results, err := txn.Query(ctx, dsq.Query{
 		Prefix:   dsFetchingPrefix.String(),
 		Orders:   []dsq.Order{dsq.OrderByKey{}},
 		KeysOnly: true,
@@ -881,7 +881,7 @@ func (s *Store) getFetching(txn ds.Txn) ([]Bid, error) {
 		if res.Error != nil {
 			return nil, fmt.Errorf("getting next result: %v", res.Error)
 		}
-		b, err := getBid(txn, auction.BidID(path.Base(res.Key)))
+		b, err := getBid(ctx, txn, auction.BidID(path.Base(res.Key)))
 		if err != nil {
 			return nil, fmt.Errorf("getting bid: %v", err)
 		}
@@ -893,34 +893,34 @@ func (s *Store) getFetching(txn ds.Txn) ([]Bid, error) {
 // saveAndTransitionStatus saves bid state and transitions to a new status.
 // Do not directly edit the bids status because it is needed to determine the correct status transition.
 // Pass the desired new status with newStatus.
-func (s *Store) saveAndTransitionStatus(txn ds.Txn, b *Bid, newStatus BidStatus) error {
+func (s *Store) saveAndTransitionStatus(ctx context.Context, txn ds.Txn, b *Bid, newStatus BidStatus) error {
 	commitTxn := txn == nil
 	if commitTxn {
 		var err error
-		txn, err = s.store.NewTransaction(false)
+		txn, err = s.store.NewTransaction(ctx, false)
 		if err != nil {
 			return fmt.Errorf("creating txn: %v", err)
 		}
-		defer txn.Discard()
+		defer txn.Discard(ctx)
 	}
 
 	if b.Status != newStatus {
 		// Handle currently "queued_data" and "fetching_data" status
 		if b.Status == BidStatusQueuedData {
-			if err := txn.Delete(dsQueuedPrefix.ChildString(string(b.ID))); err != nil {
+			if err := txn.Delete(ctx, dsQueuedPrefix.ChildString(string(b.ID))); err != nil {
 				return fmt.Errorf("deleting from queued: %v", err)
 			}
 		} else if b.Status == BidStatusFetchingData {
-			if err := txn.Delete(dsFetchingPrefix.ChildString(string(b.ID))); err != nil {
+			if err := txn.Delete(ctx, dsFetchingPrefix.ChildString(string(b.ID))); err != nil {
 				return fmt.Errorf("deleting from fetching: %v", err)
 			}
 		}
 		if newStatus == BidStatusQueuedData {
-			if err := txn.Put(dsQueuedPrefix.ChildString(string(b.ID)), nil); err != nil {
+			if err := txn.Put(ctx, dsQueuedPrefix.ChildString(string(b.ID)), nil); err != nil {
 				return fmt.Errorf("putting to queued: %v", err)
 			}
 		} else if newStatus == BidStatusFetchingData {
-			if err := txn.Put(dsFetchingPrefix.ChildString(string(b.ID)), nil); err != nil {
+			if err := txn.Put(ctx, dsFetchingPrefix.ChildString(string(b.ID)), nil); err != nil {
 				return fmt.Errorf("putting to fetching: %v", err)
 			}
 		}
@@ -937,11 +937,11 @@ func (s *Store) saveAndTransitionStatus(txn ds.Txn, b *Bid, newStatus BidStatus)
 	if err != nil {
 		return fmt.Errorf("encoding value: %v", err)
 	}
-	if err := txn.Put(dsPrefix.ChildString(string(b.ID)), val); err != nil {
+	if err := txn.Put(ctx, dsPrefix.ChildString(string(b.ID)), val); err != nil {
 		return fmt.Errorf("putting value: %v", err)
 	}
 	if commitTxn {
-		if err := txn.Commit(); err != nil {
+		if err := txn.Commit(ctx); err != nil {
 			return fmt.Errorf("committing txn: %v", err)
 		}
 	}

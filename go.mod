@@ -13,20 +13,20 @@ require (
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.1-0.20201006184820-924ee87a1349 // indirect
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.1.3
-	github.com/filecoin-project/lotus v1.14.1
+	github.com/filecoin-project/lotus v1.15.0-rc3
 	github.com/google/uuid v1.3.0
 	github.com/ipfs/go-cid v0.1.0
-	github.com/ipfs/go-datastore v0.4.6
-	github.com/ipfs/go-ipfs-blockstore v1.0.4
+	github.com/ipfs/go-datastore v0.5.1
+	github.com/ipfs/go-ipfs-blockstore v1.1.2
 	github.com/ipfs/go-ipfs-cmds v0.6.0 // indirect
 	github.com/ipfs/go-ipfs-http-client v0.1.0-update-libp2p // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2
-	github.com/ipfs/go-ipld-cbor v0.0.5
+	github.com/ipfs/go-ipld-cbor v0.0.6
 	github.com/ipfs/go-ipld-format v0.2.0
-	github.com/ipld/go-car v0.3.2-0.20211001225732-32d0d9933823
+	github.com/ipld/go-car v0.3.3
 	github.com/joho/godotenv v1.3.0
-	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.9.0
+	github.com/libp2p/go-libp2p-connmgr v0.3.1
+	github.com/libp2p/go-libp2p-core v0.13.0
 	github.com/melbahja/got v0.6.1
 	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/multiformats/go-multiaddr-dns v0.3.1
@@ -45,9 +45,19 @@ require (
 	github.com/textileio/go-ds-badger3 v0.0.0-20210324034212-7b7fb3be3d1c
 	github.com/textileio/go-libp2p-pubsub-rpc v0.0.6
 	github.com/textileio/go-log/v2 v2.1.3-gke-2
-	go.opentelemetry.io/otel/metric v0.21.0
+	go.opentelemetry.io/otel/metric v0.25.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/protobuf v1.27.1
 )
 
 replace github.com/kilic/bls12-381 => github.com/kilic/bls12-381 v0.0.0-20200820230200-6b2c19996391
+
+// Lotus v1.15 forces a version of ristretto that isn't backwards compatible with go-ds-badger3.
+replace github.com/dgraph-io/ristretto => github.com/dgraph-io/ristretto v0.0.4-0.20210122082011-bb5d392ed82d
+
+// TODO(jsign): replace with tag.
+replace github.com/textileio/go-libp2p-pubsub-rpc => ../go-libp2p-pubsub-rpc
+
+replace github.com/textileio/go-ds-badger3 => ../go-ds-badger3
+
+replace github.com/hsanjuan/ipfs-lite => ../ipfs-lite

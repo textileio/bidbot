@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"crypto/rand"
 	"os"
 	"strings"
@@ -57,7 +58,8 @@ func TestStore_ListBids(t *testing.T) {
 		_, sources, err := gw.CreateHTTPSources(true)
 		require.NoError(t, err)
 
-		err = s.SaveBid(Bid{
+		ctx := context.Background()
+		err = s.SaveBid(ctx, Bid{
 			ID:               id,
 			AuctionID:        aid,
 			AuctioneerID:     auctioneerID,
@@ -98,12 +100,13 @@ func TestStore_ListBids(t *testing.T) {
 
 func TestStore_SaveBid(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 	s, dag, _ := newStore(t)
 	bid := newBid(t, dag, true)
-	err := s.SaveBid(*bid)
+	err := s.SaveBid(ctx, *bid)
 	require.NoError(t, err)
 
-	got, err := s.GetBid(bid.ID)
+	got, err := s.GetBid(ctx, bid.ID)
 	require.NoError(t, err)
 	assert.Equal(t, bid.ID, got.ID)
 	assert.Equal(t, bid.AuctionID, got.AuctionID)
@@ -123,33 +126,34 @@ func TestStore_SaveBid(t *testing.T) {
 }
 
 func TestStore_StatusProgression(t *testing.T) {
+	ctx := context.Background()
 	s, dag, bs := newStore(t)
 	t.Run("happy path", func(t *testing.T) {
 		bid := newBid(t, dag, true)
-		err := s.SaveBid(*bid)
+		err := s.SaveBid(ctx, *bid)
 		require.NoError(t, err)
 
 		id := bid.ID
-		got, err := s.GetBid(id)
+		got, err := s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusSubmitted, got.Status)
 
-		err = s.SetAwaitingProposalCid(id, bid.Sources)
+		err = s.SetAwaitingProposalCid(ctx, id, bid.Sources)
 		require.NoError(t, err)
-		got, err = s.GetBid(id)
+		got, err = s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusAwaitingProposal, got.Status)
 
-		err = s.SetProposalCid(id, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
+		err = s.SetProposalCid(ctx, id, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
 		require.NoError(t, err)
-		got, err = s.GetBid(id)
+		got, err = s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusFetchingData, got.Status)
 
 		// Allow to finish
 		time.Sleep(time.Second * 1)
 
-		got, err = s.GetBid(id)
+		got, err = s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusFinalized, got.Status)
 		assert.Empty(t, got.ErrorCause)
@@ -158,7 +162,7 @@ func TestStore_StatusProgression(t *testing.T) {
 		f, err := os.Open(s.dealDataFilePathFor(id, bid.PayloadCid.String()))
 		require.NoError(t, err)
 		defer func() { _ = f.Close() }()
-		h, err := car.LoadCar(bs, f)
+		h, err := car.LoadCar(ctx, bs, f)
 		require.NoError(t, err)
 		require.Len(t, h.Roots, 1)
 		require.True(t, h.Roots[0].Equals(bid.PayloadCid))
@@ -166,26 +170,26 @@ func TestStore_StatusProgression(t *testing.T) {
 
 	t.Run("unreachable data uri", func(t *testing.T) {
 		bid := newBid(t, dag, false)
-		err := s.SaveBid(*bid)
+		err := s.SaveBid(ctx, *bid)
 		require.NoError(t, err)
 
 		id := bid.ID
-		got, err := s.GetBid(id)
+		got, err := s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusSubmitted, got.Status)
 
-		err = s.SetAwaitingProposalCid(id, bid.Sources)
+		err = s.SetAwaitingProposalCid(ctx, id, bid.Sources)
 		require.NoError(t, err)
-		got, err = s.GetBid(id)
+		got, err = s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusAwaitingProposal, got.Status)
-		err = s.SetProposalCid(id, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
+		err = s.SetProposalCid(ctx, id, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
 		require.NoError(t, err)
 
 		// Allow to finish
 		time.Sleep(time.Second * 1)
 
-		got, err = s.GetBid(id)
+		got, err = s.GetBid(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, BidStatusErrored, got.Status)
 		assert.NotEmpty(t, got.ErrorCause)
@@ -198,26 +202,28 @@ func TestStore_GC(t *testing.T) {
 	successfulBid := newBid(t, dag, true)
 	failBid := newBid(t, dag, false)
 	hangingBid := newBid(t, dag, false)
-	_ = s.SaveBid(*successfulBid)
-	_ = s.SaveBid(*failBid)
-	_ = s.SaveBid(*hangingBid)
+	ctx := context.Background()
 
-	_ = s.SetAwaitingProposalCid(successfulBid.ID, successfulBid.Sources)
-	_ = s.SetProposalCid(successfulBid.ID, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
-	_ = s.SetAwaitingProposalCid(failBid.ID, failBid.Sources)
-	_ = s.SetProposalCid(failBid.ID, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
-	_ = s.SetAwaitingProposalCid(hangingBid.ID, hangingBid.Sources)
+	_ = s.SaveBid(ctx, *successfulBid)
+	_ = s.SaveBid(ctx, *failBid)
+	_ = s.SaveBid(ctx, *hangingBid)
+
+	_ = s.SetAwaitingProposalCid(ctx, successfulBid.ID, successfulBid.Sources)
+	_ = s.SetProposalCid(ctx, successfulBid.ID, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
+	_ = s.SetAwaitingProposalCid(ctx, failBid.ID, failBid.Sources)
+	_ = s.SetProposalCid(ctx, failBid.ID, cid.NewCidV1(cid.Raw, util.Hash([]byte("howdy"))))
+	_ = s.SetAwaitingProposalCid(ctx, hangingBid.ID, hangingBid.Sources)
 
 	// Allow to finish
 	time.Sleep(time.Second * 1)
 
-	successfulBid, _ = s.GetBid(successfulBid.ID)
+	successfulBid, _ = s.GetBid(ctx, successfulBid.ID)
 	assert.Equal(t, BidStatusFinalized, successfulBid.Status)
 	successFile := s.dealDataFilePathFor(successfulBid.ID, successfulBid.PayloadCid.String())
 	_, err := os.Stat(successFile)
 	require.NoError(t, err)
 
-	failBid, _ = s.GetBid(failBid.ID)
+	failBid, _ = s.GetBid(ctx, failBid.ID)
 	assert.Equal(t, BidStatusErrored, failBid.Status)
 	failFile := s.dealDataFilePathFor(failBid.ID, failBid.PayloadCid.String())
 	// simulate leftover file for failed deals
@@ -231,11 +237,11 @@ func TestStore_GC(t *testing.T) {
 	require.NoError(t, err)
 	_ = f.Close()
 
-	hangingBid, _ = s.GetBid(hangingBid.ID)
+	hangingBid, _ = s.GetBid(ctx, hangingBid.ID)
 	assert.Equal(t, BidStatusAwaitingProposal, hangingBid.Status)
 
 	// GC without discarding orphan deals
-	s.GC(0)
+	s.GC(ctx, 0)
 	_, err = os.Stat(successFile)
 	require.True(t, os.IsNotExist(err), "file for finalized deal should have been removed")
 	_, err = os.Stat(failFile)
@@ -243,17 +249,17 @@ func TestStore_GC(t *testing.T) {
 	_, err = os.Stat(manualFile)
 	require.NoError(t, err, "manually downloaded file should have been kept")
 
-	_, err = s.GetBid(hangingBid.ID)
+	_, err = s.GetBid(ctx, hangingBid.ID)
 	require.NoError(t, err, "not cleaning orphan deals")
 
 	// GC with discarding orphan deals
 	time.Sleep(100 * time.Millisecond)
-	s.GC(100 * time.Millisecond)
+	s.GC(ctx, 100*time.Millisecond)
 	_, err = os.Stat(failFile)
 	require.NoError(t, err, "file for errored deal should always be kept")
 	_, err = os.Stat(manualFile)
 	require.Error(t, err, "manually downloaded file should be discarded")
-	_, err = s.GetBid(hangingBid.ID)
+	_, err = s.GetBid(ctx, hangingBid.ID)
 	require.Equal(t, ErrBidNotFound, err, "orphan deals should have been cleaned up")
 }
 

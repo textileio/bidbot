@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -158,7 +159,7 @@ func (s *mockService) SetPaused(paused bool) {
 	panic("not implemented")
 }
 
-func (s *mockService) GetBid(id auction.BidID) (*bidstore.Bid, error) {
+func (s *mockService) GetBid(ctx context.Context, id auction.BidID) (*bidstore.Bid, error) {
 	args := s.Called(id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

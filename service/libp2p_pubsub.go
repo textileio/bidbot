@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	core "github.com/libp2p/go-libp2p-core/peer"
 	pb "github.com/textileio/bidbot/gen/v1"
@@ -26,8 +27,8 @@ type CommChannel interface {
 // MessageHandler handles messages from auctioneer.
 type MessageHandler interface {
 	AuctionsHandler(core.ID, *pb.Auction) error
-	WinsHandler(*pb.WinningBid) error
-	ProposalsHandler(*pb.WinningBidProposal) error
+	WinsHandler(context.Context, *pb.WinningBid) error
+	ProposalsHandler(context.Context, *pb.WinningBidProposal) error
 }
 
 // Libp2pPubsub communicates with auctioneer via libp2p pubsub.
@@ -100,8 +101,9 @@ func (ps *Libp2pPubsub) Subscribe(bootstrap bool, h MessageHandler) error {
 		if err := proto.Unmarshal(msg, wb); err != nil {
 			return nil, fmt.Errorf("unmarshaling message: %v", err)
 		}
-		err := h.WinsHandler(wb)
-		if err != nil {
+		ctx, cls := context.WithTimeout(context.Background(), time.Second*30)
+		defer cls()
+		if err := h.WinsHandler(ctx, wb); err != nil {
 			log.Errorf("handling proposal for bid %s: %v", wb.BidId, err)
 		}
 		return nil, err
@@ -120,8 +122,9 @@ func (ps *Libp2pPubsub) Subscribe(bootstrap bool, h MessageHandler) error {
 		if err := proto.Unmarshal(msg, proposal); err != nil {
 			return nil, fmt.Errorf("unmarshaling message: %v", err)
 		}
-		err := h.ProposalsHandler(proposal)
-		if err != nil {
+		ctx, cls := context.WithTimeout(context.Background(), time.Second*30)
+		defer cls()
+		if err := h.ProposalsHandler(ctx, proposal); err != nil {
 			log.Errorf("handling wins for bid %s: %v", proposal.BidId, err)
 		}
 		return nil, err

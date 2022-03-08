@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -69,11 +68,6 @@ var Flags = []cli.Flag{
 		Description: "Libp2p connection manager high water mark",
 	},
 	{
-		Name:        "conn-grace",
-		DefValue:    time.Second * 120,
-		Description: "Libp2p connection manager grace period",
-	},
-	{
 		Name:        "quic",
 		DefValue:    false,
 		Description: "Enable the QUIC transport",
@@ -109,17 +103,22 @@ func GetConfig(v *viper.Viper, repoPathEnv, defaultRepoPath string, isAuctioneer
 	if repoPath == "" {
 		repoPath = defaultRepoPath
 	}
+
+	connMan, err := connmgr.NewConnManager(
+		v.GetInt("conn-low"),
+		v.GetInt("conn-high"),
+	)
+	if err != nil {
+		return peer.Config{}, fmt.Errorf("creating conn manager: %s", err)
+	}
+
 	return peer.Config{
-		RepoPath:           repoPath,
-		PrivKey:            priv,
-		ListenMultiaddrs:   cli.ParseStringSlice(v, "listen-multiaddr"),
-		AnnounceMultiaddrs: cli.ParseStringSlice(v, "announce-multiaddr"),
-		BootstrapAddrs:     cli.ParseStringSlice(v, "bootstrap-multiaddr"),
-		ConnManager: connmgr.NewConnManager(
-			v.GetInt("conn-low"),
-			v.GetInt("conn-high"),
-			v.GetDuration("conn-grace"),
-		),
+		RepoPath:                 repoPath,
+		PrivKey:                  priv,
+		ListenMultiaddrs:         cli.ParseStringSlice(v, "listen-multiaddr"),
+		AnnounceMultiaddrs:       cli.ParseStringSlice(v, "announce-multiaddr"),
+		BootstrapAddrs:           cli.ParseStringSlice(v, "bootstrap-multiaddr"),
+		ConnManager:              connMan,
 		EnableQUIC:               v.GetBool("quic"),
 		EnableNATPortMap:         v.GetBool("nat"),
 		EnableMDNS:               v.GetBool("mdns"),
