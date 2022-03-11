@@ -34,7 +34,7 @@ require (
 	github.com/multiformats/go-multihash v0.1.0
 	github.com/oklog/ulid/v2 v2.0.2
 	github.com/shirou/gopsutil v2.20.5+incompatible // indirect
-	github.com/spf13/cobra v1.1.3
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.7.0
