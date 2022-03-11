@@ -13,7 +13,7 @@ require (
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.1-0.20201006184820-924ee87a1349 // indirect
 	github.com/filecoin-project/go-jsonrpc v0.1.5
 	github.com/filecoin-project/go-state-types v0.1.3
-	github.com/filecoin-project/lotus v1.15.0-rc3
+	github.com/filecoin-project/lotus v1.15.0
 	github.com/google/uuid v1.3.0
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-datastore v0.5.1
