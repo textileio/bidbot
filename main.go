@@ -416,7 +416,7 @@ var daemonCmd = &cobra.Command{
 			},
 			BytesLimiter:        bytesLimiter,
 			ConcurrentImports:   v.GetInt("concurrent-imports-limit"),
-			BoostDownload:       v.GetBool("boost-download"),
+			ChunkedDownload:     v.GetBool("boost-download"),
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 			PricingRules:        pricing.EmptyRules{},
 			PricingRulesStrict:  v.GetBool("cid-gravity-strict"),

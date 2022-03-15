@@ -66,25 +66,6 @@ var (
 	dsFetchingPrefix = ds.NewKey("/data_fetching")
 )
 
-// ProgressReporter reports the progress processing a deal.
-type ProgressReporter interface {
-	StartFetching(bidID auction.BidID, attempts uint32)
-	ErrorFetching(bidID auction.BidID, attempts uint32, err error)
-	StartImporting(bidID auction.BidID, attempts uint32)
-	EndImporting(bidID auction.BidID, attempts uint32, err error)
-	Finalized(bidID auction.BidID)
-	Errored(bidID auction.BidID, errrorCause string)
-}
-
-type nullProgressReporter struct{}
-
-func (pr nullProgressReporter) StartFetching(bidID auction.BidID, attempts uint32)            {}
-func (pr nullProgressReporter) ErrorFetching(bidID auction.BidID, attempts uint32, err error) {}
-func (pr nullProgressReporter) StartImporting(bidID auction.BidID, attempts uint32)           {}
-func (pr nullProgressReporter) EndImporting(bidID auction.BidID, attempts uint32, err error)  {}
-func (pr nullProgressReporter) Finalized(bidID auction.BidID)                                 {}
-func (pr nullProgressReporter) Errored(bidID auction.BidID, errorCause string)                {}
-
 // Bid defines the core bid model from a miner's perspective.
 type Bid struct {
 	ID                   auction.BidID
@@ -179,6 +160,8 @@ type Store struct {
 	dealProgressReporter  ProgressReporter
 	chunkedDownload       bool
 
+	runsLotusBoost bool
+
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -199,22 +182,28 @@ func NewStore(
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
 	chunkedDownload bool,
+	runsLotusBoost bool,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
-		store:                 store,
-		fc:                    fc,
-		lc:                    lc,
-		bytesLimiter:          bytesLimiter,
-		jobCh:                 make(chan *Bid, MaxDataURIFetchConcurrency),
-		tickCh:                make(chan struct{}, MaxDataURIFetchConcurrency),
+		store:        store,
+		fc:           fc,
+		lc:           lc,
+		bytesLimiter: bytesLimiter,
+
+		jobCh:  make(chan *Bid, MaxDataURIFetchConcurrency),
+		tickCh: make(chan struct{}, MaxDataURIFetchConcurrency),
+
 		dealDataDirectory:     dealDataDirectory,
 		dealDataFetchAttempts: dealDataFetchAttempts,
 		dealDataFetchTimeout:  dealDataFetchTimeout,
 		dealProgressReporter:  dealProgressReporter,
 		chunkedDownload:       chunkedDownload,
-		ctx:                   ctx,
-		cancel:                cancel,
+
+		runsLotusBoost: runsLotusBoost,
+
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	if concurrentImports > 0 {
 		s.semImports = semaphore.NewWeighted(int64(concurrentImports))
@@ -610,13 +599,30 @@ func (s *Store) fetchWorker(num int) {
 			if s.ctx.Err() != nil {
 				return
 			}
-			b.DataURIFetchAttempts++
-			log.Debugf("worker %d got job %s (attempt=%d/%d)", num, b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
-			status := s.fetchOne(b)
+
+			log.Debugf("worker %d got job %s", num, b.ID)
+
+			status := BidStatusFinalized
+			if s.runsLotusBoost {
+				// If the storage-provider is running Boost, dealerd used the new libp2p
+				// for deal making, which will receive the CAR URL in the deal proposal.
+				// Lotus will automatically download and import the CAR file, so we don't need
+				// to do it in bidbot.
+				// The `status` is set to BidStatusFinalized by default above, so
+				// we'll update the bid to finalized directly.
+				log.Infof("skipping download+import since we're running Boost")
+			} else {
+				// If we aren't running Boost, we do the usual download+import logic.
+				b.DataURIFetchAttempts++
+				log.Debugf("download+import for %s attempt=%d/%d", b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
+				status = s.fetchOne(b)
+			}
+
 			if err := s.saveAndTransitionStatus(s.ctx, nil, b, status); err != nil {
 				log.Errorf("updating status for bid %s (%s): %v", b.ID, status, err)
 			}
 			log.Debugf("worker %d finished job %s", num, b.ID)
+
 			select {
 			case s.tickCh <- struct{}{}:
 			default:
