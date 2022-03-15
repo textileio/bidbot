@@ -177,8 +177,7 @@ type Store struct {
 	dealDataFetchAttempts uint32
 	dealDataFetchTimeout  time.Duration
 	dealProgressReporter  ProgressReporter
-
-	boostedDownload bool
+	chunkedDownload       bool
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -199,7 +198,7 @@ func NewStore(
 	discardOrphanDealsAfter time.Duration,
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
-	boostDownload bool,
+	chunkedDownload bool,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
@@ -213,7 +212,7 @@ func NewStore(
 		dealDataFetchAttempts: dealDataFetchAttempts,
 		dealDataFetchTimeout:  dealDataFetchTimeout,
 		dealProgressReporter:  dealProgressReporter,
-		boostedDownload:       boostDownload,
+		chunkedDownload:       chunkedDownload,
 		ctx:                   ctx,
 		cancel:                cancel,
 	}
@@ -512,7 +511,7 @@ func (s *Store) WriteDealData(b *Bid) (string, error) {
 func (s *Store) WriteDataURI(bidID auction.BidID, payloadCid, uri string, size uint64) (string, error) {
 	carDownloadPath := s.dealDataFilePathFor(bidID, payloadCid)
 
-	if s.boostedDownload {
+	if s.chunkedDownload {
 		ok := s.boostDownload(s.ctx, uri, carDownloadPath)
 		if ok {
 			return carDownloadPath, nil
