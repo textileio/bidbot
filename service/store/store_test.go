@@ -273,8 +273,19 @@ func newStore(t *testing.T) (*Store, format.DAGService, blockstore.Blockstore) {
 		PrivKey:  sk,
 	})
 	require.NoError(t, err)
-	s, err := NewStore(ds, newFilClientMock(), newLotusClientMock(), t.TempDir(), 2, time.Second, nil, 0,
-		limiter.NopeLimiter{}, 1<<30, false)
+	s, err := NewStore(
+		ds,
+		newFilClientMock(),
+		newLotusClientMock(),
+		t.TempDir(),
+		2,
+		time.Second,
+		nil,
+		0,
+		limiter.NopeLimiter{},
+		1<<30,
+		false,
+		false)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, s.Close())
