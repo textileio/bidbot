@@ -713,7 +713,9 @@ func (s *Store) periodicalGC(discardOrphanDealsAfter time.Duration) {
 
 // GC cleans up deal data files, if discardOrphanDealsAfter is not zero, it
 // also removes bids staying at BidStatusAwaitingProposal for that longer.
-func (s *Store) GC(ctx context.Context, discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRemoved, filesEvaluated int) {
+func (s *Store) GC(
+	ctx context.Context,
+	discardOrphanDealsAfter time.Duration) (bidsRemoved, filesRemoved, filesEvaluated int) {
 	bids, err := s.ListBids(Query{})
 	if err != nil {
 		log.Errorf("listing bids: %v", err)
