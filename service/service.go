@@ -192,6 +192,12 @@ func New(
 	}
 	fin.Add(commChannel)
 
+	isRunningBoost, err := lc.IsRunningBoost()
+	if err != nil {
+		return nil, fin.Cleanupf("detecting if storage-provider is running Boost: %s", err)
+	}
+	log.Infof("running-boost %v", isRunningBoost)
+
 	// Create bid store
 	s, err := bidstore.NewStore(
 		store,
@@ -205,6 +211,7 @@ func New(
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
 		conf.ChunkedDownload,
+		isRunningBoost,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)

@@ -22,12 +22,18 @@ var (
 	requestTimeout = time.Second * 10
 )
 
+const (
+	DealProtocolv110 = "/fil/storage/mk/1.1.0"
+	DealProtocolv120 = "/fil/storage/mk/1.2.0"
+)
+
 // LotusClient provides access to Lotus for importing deal data.
 type LotusClient interface {
 	io.Closer
 	HealthCheck() error
 	CurrentSealingSectors() (int, error)
 	ImportData(pcid cid.Cid, file string) error
+	IsRunningBoost() (bool, error)
 }
 
 // Client provides access to Lotus for importing deal data.
@@ -162,6 +168,31 @@ func (c *Client) ImportData(pcid cid.Cid, file string) error {
 		return fmt.Errorf("calling storage miner deals import data: %w", err)
 	}
 	return nil
+}
+
+func (c *Client) IsRunningBoost() (bool, error) {
+	if c.fakeMode {
+		return false, nil
+	}
+
+	ctx, cls := context.WithTimeout(context.Background(), time.Second*10)
+	defer cls()
+	peerID, err := c.cmkt.ID(ctx)
+	if err != nil {
+		return false, fmt.Errorf("getting lotus market peer-id: %s", err)
+	}
+	pinfo, err := c.cmkt.NetPeerInfo(ctx, peerID)
+	if err != nil {
+		return false, fmt.Errorf("getting lotus market peer %s info: %s", peerID, err)
+	}
+
+	for _, p := range pinfo.Protocols {
+		if p == DealProtocolv120 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 type clientBuilder func(ctx context.Context) (*api.StorageMinerStruct, func(), error)
