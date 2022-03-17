@@ -5,9 +5,9 @@ name: Release
 on:
   push:
     branches:
-      - '**'
+      - '_**'
     tags:
-      - 'v*'
+      - '_v*'
 
 jobs:
   release:
