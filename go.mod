@@ -43,7 +43,7 @@ require (
 	github.com/textileio/crypto v0.0.0-20210929130053-08edebc3361a
 	github.com/textileio/go-datastore-extensions v1.0.1
 	github.com/textileio/go-ds-badger3 v0.1.0
-	github.com/textileio/go-libp2p-pubsub-rpc v0.0.8
+	github.com/textileio/go-libp2p-pubsub-rpc v0.0.9
 	github.com/textileio/go-log/v2 v2.1.3-gke-2
 	go.opentelemetry.io/otel/metric v0.25.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
