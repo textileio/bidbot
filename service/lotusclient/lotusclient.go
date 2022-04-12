@@ -123,7 +123,7 @@ func (c *Client) CurrentSealingSectors() (int, error) {
 	// https://github.com/filecoin-project/lotus/blob/v1.10.0/extern/storage-sealing/stats.go#L65
 	// hardcode here to avoid importing tons of dependencies.
 	notSealingStates := []string{"Proving", "Removed", "Removing",
-		"Terminating", "TerminateWait", "TerminateFinality", "TerminateFailed"}
+		"Terminating", "TerminateWait", "TerminateFinality", "TerminateFailed", "Available"}
 
 	if c.finalizeEarly {
 		// some additional states can be mapped to sstProving with the FinalizeEarly option
