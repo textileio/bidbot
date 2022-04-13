@@ -161,8 +161,6 @@ type Store struct {
 	dealProgressReporter  ProgressReporter
 	chunkedDownload       bool
 
-	runsLotusBoost bool
-
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -183,7 +181,6 @@ func NewStore(
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
 	chunkedDownload bool,
-	runsLotusBoost bool,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
@@ -200,8 +197,6 @@ func NewStore(
 		dealDataFetchTimeout:  dealDataFetchTimeout,
 		dealProgressReporter:  dealProgressReporter,
 		chunkedDownload:       chunkedDownload,
-
-		runsLotusBoost: runsLotusBoost,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -639,22 +634,9 @@ func (s *Store) fetchWorker(num int) {
 			}
 
 			log.Debugf("worker %d got job %s", num, b.ID)
-
-			status := BidStatusFinalized
-			if s.runsLotusBoost {
-				// If the storage-provider is running Boost, dealerd used the new libp2p
-				// for deal making, which will receive the CAR URL in the deal proposal.
-				// Lotus will automatically download and import the CAR file, so we don't need
-				// to do it in bidbot.
-				// The `status` is set to BidStatusFinalized by default above, so
-				// we'll update the bid to finalized directly.
-				log.Infof("skipping download+import since we're running Boost")
-			} else {
-				// If we aren't running Boost, we do the usual download+import logic.
-				b.DataURIFetchAttempts++
-				log.Debugf("download+import for %s attempt=%d/%d", b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
-				status = s.fetchOne(b)
-			}
+			b.DataURIFetchAttempts++
+			log.Debugf("download+import for %s attempt=%d/%d", b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
+			status = s.fetchOne(b)
 
 			if err := s.saveAndTransitionStatus(s.ctx, nil, b, status); err != nil {
 				log.Errorf("updating status for bid %s (%s): %v", b.ID, status, err)

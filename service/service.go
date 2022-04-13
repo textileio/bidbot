@@ -61,7 +61,6 @@ type Config struct {
 	BytesLimiter        limiter.Limiter
 	ConcurrentImports   int
 	ChunkedDownload     bool
-	UseBoost            bool
 	SealingSectorsLimit int
 	PricingRules        pricing.PricingRules
 	PricingRulesStrict  bool
@@ -212,7 +211,6 @@ func New(
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
 		conf.ChunkedDownload,
-		isRunningBoost,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)
