@@ -299,7 +299,7 @@ func validate(b Bid) error {
 func (s *Store) GetBid(ctx context.Context, id auction.BidID) (*Bid, error) {
 	b, err := getBid(ctx, s.store, id)
 	if err != nil {
-		return nil, fmt.Errorf("get bid: %s", err)
+		return nil, err
 	}
 	return b, nil
 }
@@ -333,7 +333,7 @@ func (s *Store) SetAwaitingProposalCid(ctx context.Context, id auction.BidID, so
 
 	b, err := getBid(ctx, txn, id)
 	if err != nil {
-		return fmt.Errorf("get bid: %s", err)
+		return err
 	}
 	if b.Status == BidStatusAwaitingProposal {
 		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
@@ -369,7 +369,7 @@ func (s *Store) SetProposalCid(ctx context.Context, id auction.BidID, pcid cid.C
 
 	b, err := getBid(ctx, txn, id)
 	if err != nil {
-		return fmt.Errorf("get bid: %s", err)
+		return err
 	}
 	if b.Status > BidStatusAwaitingProposal {
 		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
@@ -406,7 +406,7 @@ func (s *Store) SetDealUID(ctx context.Context, id auction.BidID, dealUID string
 
 	b, err := getBid(ctx, txn, id)
 	if err != nil {
-		return fmt.Errorf("get bid: %s", err)
+		return err
 	}
 	if b.Status > BidStatusAwaitingProposal {
 		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
