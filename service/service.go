@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ipfs/go-cid"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	core "github.com/libp2p/go-libp2p-core/peer"
@@ -502,6 +503,14 @@ func (s *Service) WinsHandler(ctx context.Context, wb *pb.WinningBid) error {
 
 // ProposalsHandler implements MessageHandler.
 func (s *Service) ProposalsHandler(ctx context.Context, prop *pb.WinningBidProposal) error {
+	if _, err := uuid.Parse(prop.DealUid); err != nil {
+		log.Info("bid %s received deal uid %s in auction %s", prop.BidId, prop.DealUid, prop.AuctionId)
+		if err := s.store.SetDealUID(ctx, auction.BidID(prop.BidId), prop.DealUid); err != nil {
+			return fmt.Errorf("setting proposal cid: %v", err)
+		}
+	}
+
+	log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
 	pcid, err := cid.Decode(prop.ProposalCid)
 	if err != nil {
 		return fmt.Errorf("decoding proposal cid: %v", err)
@@ -511,7 +520,6 @@ func (s *Service) ProposalsHandler(ctx context.Context, prop *pb.WinningBidPropo
 	}
 	// ready to fetch data, so the requested quota is actually in use.
 	s.bytesLimiter.Secure(prop.AuctionId)
-	log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
 	return nil
 }
 
