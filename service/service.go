@@ -507,7 +507,6 @@ func (s *Service) ProposalsHandler(ctx context.Context, prop *pb.WinningBidPropo
 		if err := s.store.SetDealUID(ctx, auction.BidID(prop.BidId), prop.DealUid); err != nil {
 			return fmt.Errorf("setting proposal cid: %v", err)
 		}
-		return nil
 	} else {
 		// Handle legacy deal proposal.
 		log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)

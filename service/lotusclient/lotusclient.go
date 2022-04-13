@@ -23,7 +23,10 @@ var (
 )
 
 const (
+	// DealProtocolv110 is the deal protocol version name for the legacy
+	// deal proposal protocol.
 	DealProtocolv110 = "/fil/storage/mk/1.1.0"
+	// DealProtocolv120 is the deal protocol version name for Boost.
 	DealProtocolv120 = "/fil/storage/mk/1.2.0"
 )
 
@@ -170,6 +173,7 @@ func (c *Client) ImportData(pcid cid.Cid, file string) error {
 	return nil
 }
 
+// IsRunningBoost detects if the storage provider is running Boost.
 func (c *Client) IsRunningBoost() (bool, error) {
 	if c.fakeMode {
 		return false, nil
