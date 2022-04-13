@@ -501,20 +501,23 @@ func (s *Service) WinsHandler(ctx context.Context, wb *pb.WinningBid) error {
 
 // ProposalsHandler implements MessageHandler.
 func (s *Service) ProposalsHandler(ctx context.Context, prop *pb.WinningBidProposal) error {
-	if _, err := uuid.Parse(prop.DealUid); err != nil {
+	if _, err := uuid.Parse(prop.DealUid); err == nil {
+		// Handle deal proposal made with Boost.
 		log.Info("bid %s received deal uid %s in auction %s", prop.BidId, prop.DealUid, prop.AuctionId)
 		if err := s.store.SetDealUID(ctx, auction.BidID(prop.BidId), prop.DealUid); err != nil {
 			return fmt.Errorf("setting proposal cid: %v", err)
 		}
-	}
-
-	log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
-	pcid, err := cid.Decode(prop.ProposalCid)
-	if err != nil {
-		return fmt.Errorf("decoding proposal cid: %v", err)
-	}
-	if err := s.store.SetProposalCid(ctx, auction.BidID(prop.BidId), pcid); err != nil {
-		return fmt.Errorf("setting proposal cid: %v", err)
+		return nil
+	} else {
+		// Handle legacy deal proposal.
+		log.Infof("bid %s received proposal cid %s in auction %s", prop.BidId, prop.ProposalCid, prop.AuctionId)
+		pcid, err := cid.Decode(prop.ProposalCid)
+		if err != nil {
+			return fmt.Errorf("decoding proposal cid: %v", err)
+		}
+		if err := s.store.SetProposalCid(ctx, auction.BidID(prop.BidId), pcid); err != nil {
+			return fmt.Errorf("setting proposal cid: %v", err)
+		}
 	}
 	// ready to fetch data, so the requested quota is actually in use.
 	s.bytesLimiter.Secure(prop.AuctionId)
