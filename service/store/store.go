@@ -82,6 +82,7 @@ type Bid struct {
 	StartEpoch           uint64
 	FastRetrieval        bool
 	ProposalCid          cid.Cid
+	DealUID              string
 	DataURIFetchAttempts uint32
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -392,6 +393,43 @@ func (s *Store) SetProposalCid(ctx context.Context, id auction.BidID, pcid cid.C
 	}
 
 	log.Infof("set proposal cid for bid %s; enqueued sources %s for fetch", b.ID, b.Sources)
+	return nil
+}
+
+// SetDealUID sets the DealUID and updates status to Finished.
+// If a bid is not found for id, ErrBidNotFound is returned.
+func (s *Store) SetDealUID(ctx context.Context, id auction.BidID, dealUID string) error {
+	if dealUID == "" {
+		return errors.New("deal uid is empty")
+	}
+
+	txn, err := s.store.NewTransaction(ctx, false)
+	if err != nil {
+		return fmt.Errorf("creating txn: %v", err)
+	}
+	defer txn.Discard(ctx)
+
+	b, err := getBid(ctx, txn, id)
+	if err != nil {
+		return err
+	}
+	if b.Status > BidStatusAwaitingProposal {
+		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
+		return nil
+	}
+	if b.Status != BidStatusAwaitingProposal {
+		return fmt.Errorf("expect bid to have status '%s', got '%s'", BidStatusAwaitingProposal, b.Status)
+	}
+
+	b.DealUID = dealUID
+	if err := s.saveAndTransitionStatus(ctx, txn, b, BidStatusFinalized); err != nil {
+		return fmt.Errorf("saving finalized status data uri: %v", err)
+	}
+	if err := txn.Commit(ctx); err != nil {
+		return fmt.Errorf("committing txn: %v", err)
+	}
+
+	log.Infof("set dealuid %s for bid %s; enqueued sources %s for fetch", dealUID, b.ID, b.Sources)
 	return nil
 }
 
