@@ -299,7 +299,7 @@ func validate(b Bid) error {
 func (s *Store) GetBid(ctx context.Context, id auction.BidID) (*Bid, error) {
 	b, err := getBid(ctx, s.store, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get bid: %s", err)
 	}
 	return b, nil
 }
@@ -333,7 +333,7 @@ func (s *Store) SetAwaitingProposalCid(ctx context.Context, id auction.BidID, so
 
 	b, err := getBid(ctx, txn, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("get bid: %s", err)
 	}
 	if b.Status == BidStatusAwaitingProposal {
 		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
@@ -369,7 +369,7 @@ func (s *Store) SetProposalCid(ctx context.Context, id auction.BidID, pcid cid.C
 
 	b, err := getBid(ctx, txn, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("get bid: %s", err)
 	}
 	if b.Status > BidStatusAwaitingProposal {
 		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
@@ -391,7 +391,7 @@ func (s *Store) SetProposalCid(ctx context.Context, id auction.BidID, pcid cid.C
 	return nil
 }
 
-// SetDealUID sets the DealUID and updates status to Finished.
+// SetDealUID sets the DealUID and updates status to BidStatusFinalized.
 // If a bid is not found for id, ErrBidNotFound is returned.
 func (s *Store) SetDealUID(ctx context.Context, id auction.BidID, dealUID string) error {
 	if dealUID == "" {
@@ -406,7 +406,7 @@ func (s *Store) SetDealUID(ctx context.Context, id auction.BidID, dealUID string
 
 	b, err := getBid(ctx, txn, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("get bid: %s", err)
 	}
 	if b.Status > BidStatusAwaitingProposal {
 		log.Infof("bid %s already in '%s', duplicated message?", b.ID, b.Status)
@@ -632,17 +632,13 @@ func (s *Store) fetchWorker(num int) {
 			if s.ctx.Err() != nil {
 				return
 			}
-
-			log.Debugf("worker %d got job %s", num, b.ID)
 			b.DataURIFetchAttempts++
-			log.Debugf("download+import for %s attempt=%d/%d", b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
-			status = s.fetchOne(b)
-
+			log.Debugf("worker %d got job %s (attempt=%d/%d)", num, b.ID, b.DataURIFetchAttempts, s.dealDataFetchAttempts)
+			status := s.fetchOne(b)
 			if err := s.saveAndTransitionStatus(s.ctx, nil, b, status); err != nil {
 				log.Errorf("updating status for bid %s (%s): %v", b.ID, status, err)
 			}
 			log.Debugf("worker %d finished job %s", num, b.ID)
-
 			select {
 			case s.tickCh <- struct{}{}:
 			default:
