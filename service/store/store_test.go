@@ -284,7 +284,6 @@ func newStore(t *testing.T) (*Store, format.DAGService, blockstore.Blockstore) {
 		0,
 		limiter.NopeLimiter{},
 		1<<30,
-		false,
 		false)
 	require.NoError(t, err)
 	t.Cleanup(func() {
