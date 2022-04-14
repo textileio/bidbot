@@ -118,9 +118,9 @@ func (c *Client) HealthCheck() error {
 // CurrentSealingSectors returns the total number of sectors considered to be in sealing.
 func (c *Client) CurrentSealingSectors() (int, error) {
 	// these are the sector states mapping to sstProving
-	// https://github.com/filecoin-project/lotus/blob/v1.10.0/extern/storage-sealing/sector_state.go#L109
+	// https://github.com/filecoin-project/lotus/blob/v1.15.1/extern/storage-sealing/sector_state.go#L109
 	// which are the only states considered not in sealing
-	// https://github.com/filecoin-project/lotus/blob/v1.10.0/extern/storage-sealing/stats.go#L65
+	// https://github.com/filecoin-project/lotus/blob/v1.15.1/extern/storage-sealing/stats.go#L65
 	// hardcode here to avoid importing tons of dependencies.
 	notSealingStates := []string{"Proving", "Removed", "Removing",
 		"Terminating", "TerminateWait", "TerminateFinality", "TerminateFailed", "Available"}
