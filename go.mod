@@ -24,7 +24,7 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.0.6
 	github.com/ipfs/go-ipld-format v0.2.0
 	github.com/ipld/go-car v0.3.3
-	github.com/joho/godotenv v1.3.0
+	github.com/joho/godotenv v1.4.0
 	github.com/libp2p/go-libp2p-connmgr v0.3.1
 	github.com/libp2p/go-libp2p-core v0.14.0
 	github.com/melbahja/got v0.6.1
