@@ -33,7 +33,7 @@ type rawRules struct {
 	DealRateLimit   int
 	CurrentDealRate int
 	PricingRules    []struct {
-		Verified    bool
+		Verified    string
 		MinSize     uint64 // bytes
 		MaxSize     uint64 // bytes
 		MinDuration uint64 // epoches
@@ -119,9 +119,9 @@ func (cg *clientRules) PricesFor(auction *pb.Auction) (prices ResolvedPrices, va
 	for _, r := range rules.PricingRules {
 		if auction.DealSize >= r.MinSize && auction.DealSize <= r.MaxSize &&
 			auction.DealDuration >= r.MinDuration && auction.DealDuration <= r.MaxDuration {
-			if r.Verified && !prices.VerifiedPriceValid {
+			if (r.Verified == "true" || r.Verified == "any") && !prices.VerifiedPriceValid {
 				prices.VerifiedPriceValid, prices.VerifiedPrice = true, r.Price
-			} else if !prices.UnverifiedPriceValid {
+			} else if (r.Verified == "false" || r.Verified == "any") && !prices.UnverifiedPriceValid {
 				prices.UnverifiedPriceValid, prices.UnverifiedPrice = true, r.Price
 			}
 			if prices.VerifiedPriceValid && prices.UnverifiedPriceValid {

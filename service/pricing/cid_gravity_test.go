@@ -17,7 +17,7 @@ func TestPriceFor(t *testing.T) {
 	cidGravityCachePeriod = time.Second
 	rules := &rawRules{
 		PricingRules: []struct {
-			Verified    bool
+			Verified    string
 			MinSize     uint64
 			MaxSize     uint64
 			MinDuration uint64
@@ -25,32 +25,32 @@ func TestPriceFor(t *testing.T) {
 			Price       int64
 		}{
 			{
-				Verified: false, Price: 100,
+				Verified: "false", Price: 100,
 				MinSize: 2 << 20, MaxSize: 2<<30 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
-				Verified: false, Price: 10,
+				Verified: "false", Price: 10,
 				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
-				Verified: false, Price: 1000,
+				Verified: "false", Price: 1000,
 				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 2 >> 10, MaxDuration: 2 << 30,
 			},
 			{
-				Verified: true, Price: 1,
+				Verified: "true", Price: 1,
 				MinSize: 1, MaxSize: 2<<30 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
-				Verified: true, Price: 0,
+				Verified: "true", Price: 0,
 				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 1, MaxDuration: 2 << 10,
 			},
 			{
-				Verified: true, Price: 100,
+				Verified: "true", Price: 100,
 				MinSize: 2 << 30, MaxSize: 2<<40 - 1,
 				MinDuration: 2 >> 10, MaxDuration: 2 << 30,
 			},
@@ -137,7 +137,7 @@ func TestMaybeReloadRules(t *testing.T) {
 	apiResponse := []byte(`{
 	     "pricingRules": [
 		     {
-		          "verified": false,
+		          "verified": "false",
 		          "minSize": 1,
 		          "maxSize": 2,
 		          "minDuration": 1,
