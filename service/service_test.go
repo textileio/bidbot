@@ -309,7 +309,6 @@ func newLotusClientMock() *lotusclientmocks.LotusClient {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil)
-	lc.On("IsRunningBoost").Return(false, nil)
 	lc.On("Close").Return(nil)
 	return lc
 }
