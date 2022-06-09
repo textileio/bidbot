@@ -155,6 +155,11 @@ No limit by default.`,
 			Description: `If bigger than zero, only run that many imports concurrently. Zero means no limits.`,
 		},
 		{
+			Name:        "concurrent-data-download-limit",
+			DefValue:    store.MaxDataURIFetchConcurrency,
+			Description: `The maximum number of concurrent data fetches; default is 3`,
+		},
+		{
 			Name:     "boost-download",
 			DefValue: false,
 			Description: `Experimental: creates multiple TCP connections to boost download speeds. 
@@ -420,6 +425,7 @@ var daemonCmd = &cobra.Command{
 			SealingSectorsLimit: v.GetInt("sealing-sectors-limit"),
 			PricingRules:        pricing.EmptyRules{},
 			PricingRulesStrict:  v.GetBool("cid-gravity-strict"),
+			ConcurrentDownloads: v.GetInt("concurrent-data-download-limit"),
 		}
 		if cidGravityKey := v.GetString("cid-gravity-key"); cidGravityKey != "" {
 			config.PricingRules = pricing.NewCIDGravityRules(cidGravityURL, cidGravityKey)

@@ -181,6 +181,7 @@ func NewStore(
 	bytesLimiter limiter.Limiter,
 	concurrentImports int,
 	chunkedDownload bool,
+	concurrentDownloads int,
 ) (*Store, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Store{
@@ -189,8 +190,8 @@ func NewStore(
 		lc:           lc,
 		bytesLimiter: bytesLimiter,
 
-		jobCh:  make(chan *Bid, MaxDataURIFetchConcurrency),
-		tickCh: make(chan struct{}, MaxDataURIFetchConcurrency),
+		jobCh:  make(chan *Bid, concurrentDownloads),
+		tickCh: make(chan struct{}, concurrentDownloads),
 
 		dealDataDirectory:     dealDataDirectory,
 		dealDataFetchAttempts: dealDataFetchAttempts,
@@ -212,8 +213,8 @@ func NewStore(
 		return nil, fmt.Errorf("fails health check: %w", err)
 	}
 	// Create data fetch workers
-	s.wg.Add(MaxDataURIFetchConcurrency)
-	for i := 0; i < MaxDataURIFetchConcurrency; i++ {
+	s.wg.Add(concurrentDownloads)
+	for i := 0; i < concurrentDownloads; i++ {
 		go s.fetchWorker(i + 1)
 	}
 
