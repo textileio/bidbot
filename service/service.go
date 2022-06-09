@@ -64,6 +64,7 @@ type Config struct {
 	SealingSectorsLimit int
 	PricingRules        pricing.PricingRules
 	PricingRulesStrict  bool
+	ConcurrentDownloads int
 }
 
 // BidParams defines how bids are made.
@@ -205,6 +206,7 @@ func New(
 		conf.BytesLimiter,
 		conf.ConcurrentImports,
 		conf.ChunkedDownload,
+		conf.ConcurrentDownloads,
 	)
 	if err != nil {
 		return nil, fin.Cleanupf("creating bid store: %v", err)
