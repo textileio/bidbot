@@ -269,9 +269,10 @@ func validConfig(t *testing.T) (service.Config, txndswrap.TxnDatastore) {
 	}
 	peerConfig, dir := newPeerConfig(t)
 	config := service.Config{
-		AuctionFilters: auctionFilters,
-		BidParams:      bidParams,
-		Peer:           peerConfig,
+		AuctionFilters:      auctionFilters,
+		BidParams:           bidParams,
+		Peer:                peerConfig,
+		ConcurrentDownloads: 3,
 	}
 
 	store, err := dshelper.NewBadgerTxnDatastore(filepath.Join(dir, "bidstore"))
