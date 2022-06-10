@@ -157,7 +157,7 @@ No limit by default.`,
 		{
 			Name:        "concurrent-data-download-limit",
 			DefValue:    store.MaxDataURIFetchConcurrency,
-			Description: `The maximum number of concurrent data fetches; default is 3`,
+			Description: `The maximum number of concurrent data fetches`,
 		},
 		{
 			Name:     "boost-download",
