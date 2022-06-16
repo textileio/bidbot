@@ -58,7 +58,6 @@ func TestIntegrationTest(t *testing.T) {
 	require.Equal(t, uint64(180*24*60*2), rules.PricingRules[2].MinDuration)
 	require.Equal(t, uint64(540*24*60*2), rules.PricingRules[2].MaxDuration)
 	require.Equal(t, int64(10_000_000_000), rules.PricingRules[2].Price)
-
 }
 
 func TestPriceFor(t *testing.T) {
