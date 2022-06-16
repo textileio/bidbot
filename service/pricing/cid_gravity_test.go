@@ -21,7 +21,7 @@ func TestIntegrationTest(t *testing.T) {
 		DealSize:      1,
 		DealDuration:  1,
 	}
-	apiKey := "<add-here-bidbot-integration-test-api-key>"
+	apiKey := "<add-bidbot-integration-test-api-key>"
 	cg := newClientRulesFor("https://staging-api.cidgravity.com/api/integrations/bidbot", apiKey, auction.ClientAddress)
 
 	require.Equal(t, time.Time{}, cg.rulesLastUpdated.Load().(time.Time))
@@ -52,7 +52,7 @@ func TestIntegrationTest(t *testing.T) {
 	require.Equal(t, uint64(540*24*60*2), rules.PricingRules[1].MaxDuration)
 	require.Equal(t, int64(0), rules.PricingRules[1].Price)
 
-	require.Equal(t, "true", rules.PricingRules[2].Verified)
+	require.Equal(t, "false", rules.PricingRules[2].Verified)
 	require.Equal(t, uint64(32*1024*1024), rules.PricingRules[2].MinSize)
 	require.Equal(t, uint64(64*1024*1024*1024), rules.PricingRules[2].MaxSize)
 	require.Equal(t, uint64(180*24*60*2), rules.PricingRules[2].MinDuration)
