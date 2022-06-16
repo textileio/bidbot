@@ -15,6 +15,7 @@ import (
 
 func TestIntegrationTest(t *testing.T) {
 	t.Parallel()
+	t.SkipNow()
 
 	auction := &pb.Auction{
 		ClientAddress: "0xABCDE",
