@@ -13,6 +13,54 @@ import (
 	pb "github.com/textileio/bidbot/gen/v1"
 )
 
+func TestIntegrationTest(t *testing.T) {
+	t.Parallel()
+
+	auction := &pb.Auction{
+		ClientAddress: "0xABCDE",
+		DealSize:      1,
+		DealDuration:  1,
+	}
+	apiKey := "<add-here-bidbot-integration-test-api-key>"
+	cg := newClientRulesFor("https://staging-api.cidgravity.com/api/integrations/bidbot", apiKey, auction.ClientAddress)
+
+	require.Equal(t, time.Time{}, cg.rulesLastUpdated.Load().(time.Time))
+	require.Nil(t, cg.rules.Load())
+
+	err := cg.loadRules(cg.apiURL)
+	require.NoError(t, err)
+	require.NotEqual(t, time.Time{}, cg.rulesLastUpdated.Load().(time.Time))
+	require.NotNil(t, cg.rules.Load())
+	rules := cg.rules.Load().(*rawRules)
+	require.False(t, rules.Blocked)
+	require.False(t, rules.MaintenanceMode)
+	require.Equal(t, 11, rules.DealRateLimit)
+	require.Equal(t, 0, rules.CurrentDealRate)
+	require.Greater(t, len(rules.PricingRules), 0)
+
+	require.Equal(t, "true", rules.PricingRules[0].Verified)
+	require.Equal(t, uint64(256), rules.PricingRules[0].MinSize)
+	require.Equal(t, uint64(256*1024*1024), rules.PricingRules[0].MaxSize)
+	require.Equal(t, uint64(180*24*60*2), rules.PricingRules[0].MinDuration)
+	require.Equal(t, uint64(540*24*60*2), rules.PricingRules[0].MaxDuration)
+	require.Equal(t, int64(10_000_000_000), rules.PricingRules[0].Price)
+
+	require.Equal(t, "true", rules.PricingRules[1].Verified)
+	require.Equal(t, uint64(256*1024*1024), rules.PricingRules[1].MinSize)
+	require.Equal(t, uint64(64*1024*1024*1024), rules.PricingRules[1].MaxSize)
+	require.Equal(t, uint64(180*24*60*2), rules.PricingRules[1].MinDuration)
+	require.Equal(t, uint64(540*24*60*2), rules.PricingRules[1].MaxDuration)
+	require.Equal(t, int64(0), rules.PricingRules[1].Price)
+
+	require.Equal(t, "true", rules.PricingRules[2].Verified)
+	require.Equal(t, uint64(32*1024*1024), rules.PricingRules[2].MinSize)
+	require.Equal(t, uint64(64*1024*1024*1024), rules.PricingRules[2].MaxSize)
+	require.Equal(t, uint64(180*24*60*2), rules.PricingRules[2].MinDuration)
+	require.Equal(t, uint64(540*24*60*2), rules.PricingRules[2].MaxDuration)
+	require.Equal(t, int64(10_000_000_000), rules.PricingRules[2].Price)
+
+}
+
 func TestPriceFor(t *testing.T) {
 	cidGravityCachePeriod = time.Second
 	rules := &rawRules{
