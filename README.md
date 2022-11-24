@@ -8,6 +8,9 @@ Bidbot is a Filecoin Network sidecar for storage providers to bid in storage dea
 
 Join us on our [public Slack channel](https://slack.textile.io/) for news, discussions, and status updates. [Check out our blog](https://blog.textile.io/) for the latest posts and announcements.
 
+# Important note
+**This repository has been [archived](https://blog.textile.io/sunsetting-the-auction-api/) and is no longer maintained. If you are looking for an alternative tool to use, try one of these: [Estuary](https://estuary.tech/), [Web3 Storage](https://web3.storage/), or lookout for the coming release of ♠️(SPADE).**
+
 ## Table of Contents
 
 - [Installation](#installation)
